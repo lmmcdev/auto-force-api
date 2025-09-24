@@ -1,0 +1,20 @@
+import { VehicleController } from './controllers/vehicle.controller';
+import { VehicleService } from './services/vehicle.service';
+
+export class VehicleModule {
+  private vehicleService: VehicleService;
+  private vehicleController: VehicleController;
+
+  constructor() {
+    this.vehicleService = new VehicleService();
+    this.vehicleController = new VehicleController(this.vehicleService);
+  }
+
+  getController(): VehicleController {
+    return this.vehicleController;
+  }
+
+  getService(): VehicleService {
+    return this.vehicleService;
+  }
+}
