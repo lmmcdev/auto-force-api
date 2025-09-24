@@ -8,7 +8,11 @@ import { HealthService } from "../services/health.service";
 import { HealthResponseDto } from "../dto/health-response.dto";
 
 export class HealthController {
-  constructor(private readonly healthService: HealthService) {}
+  private readonly healthService: HealthService;
+
+  constructor() {
+    this.healthService = new HealthService();
+  }
 
   async getHealth(): Promise<HealthResponseDto> {
     return this.healthService.getHealthStatus();
@@ -42,8 +46,7 @@ export class HealthController {
   }
 }
 
-const healthService = new HealthService();
-const healthController = new HealthController(healthService);
+const healthController = new HealthController();
 
 export async function healthCheck(
   request: HttpRequest,
