@@ -68,5 +68,6 @@ export class VehicleService {
 
   private generateId(): string {
     return `veh_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
+  }  
+  
 }
