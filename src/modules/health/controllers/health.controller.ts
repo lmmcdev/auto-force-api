@@ -6,7 +6,7 @@ import {
 } from "@azure/functions";
 import { HealthService } from "../services/health.service";
 import { HealthResponseDto } from "../dto/health-response.dto";
-
+const healthRoute = "v1/health";
 export class HealthController {
   private readonly healthService: HealthService;
 
@@ -87,13 +87,13 @@ export async function health(
 app.http("healthCheck", {
   methods: ["GET"],
   authLevel: "anonymous",
-  route: "health",
+  route: healthRoute,
   handler: healthCheck,
 });
 
 app.http("health", {
   methods: ["GET"],
   authLevel: "anonymous",
-  route: "health/status",
+  route: `${healthRoute}/status`,
   handler: health,
 });
