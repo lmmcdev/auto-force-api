@@ -24,6 +24,8 @@ export interface Vendor{
     contact?: VendorContact | null;
     address?: VendorAddress | null;
     note?: string | null
+    createdAt?: string;
+    updatedAt?: string;
 
 }
 
@@ -44,7 +46,7 @@ export class VendorEntity implements Vendor{
         this.contact = vendor.contact;
         this.address = vendor.address;
         this.note = vendor.note || '';
-
+        
 
     }
 }

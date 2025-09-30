@@ -1,9 +1,9 @@
 import { SqlQuerySpec } from '@azure/cosmos';
-import { getVendorsContainer } from '../../../infra/cosmos'
-import { Vendor, VendorEntity, VendorStatus, VendorType } from "../entities/vendor.entity";
-import { CreateVendorDTO } from "../dto/create-vendor.dto";
-import { UpdateVendorDTO } from "../dto/update-vendor.dto";
-import { QueryVendorDTO } from '../dto/query-vendor.dto';
+import { getServiceTypesContainer } from '../../../infra/cosmos';
+import { ServiceType, ServiceTypeStatus, ServiceTypeType } from '../entities/service-type.entity';
+import { CreateServiceTypeDto } from '../dto/create-service-type.dto';
+import { UpdateServiceTypeDto } from '../dto/update-service-type.dto';
+import { QueryServiceTypeDto } from '../dto/query-service-type.dto';
 
 function nowIso() { return new Date().toISOString(); }
 
@@ -22,13 +22,13 @@ function cleanUndefined<T>(obj: T): T {
   return cleaned;
 }
 
-export class VendorService {
+export class ServiceTypeService {
 
-   private get container() {
-    return getVendorsContainer();
+  private get container() {
+    return getServiceTypesContainer();
   }
 
-   async create( payload : Omit<Vendor, "id" | "createdAt" | "updatedAt">): Promise<Vendor>{
+  async create(payload: Omit<ServiceType, "id" | "createdAt" | "updatedAt">): Promise<ServiceType> {
     if (!payload.name?.trim()) throw new Error('name is required');
 
     // chequear duplicado por nombre (si aplicaste uniqueKeyPolicy, Cosmos ya lo protege)
@@ -36,20 +36,17 @@ export class VendorService {
       query: 'SELECT TOP 1 * FROM c WHERE LOWER(c.name) = LOWER(@name)',
       parameters: [{ name: '@name', value: payload.name }]
     };
-    const { resources } = await this.container.items.query<Vendor>(query).fetchAll();
+    const { resources } = await this.container.items.query<ServiceType>(query).fetchAll();
     if (resources.length > 0) {
-      throw new Error('vendor with same name already exists');
+      throw new Error('service type with same name already exists');
     }
 
-
-    const doc: Vendor = {
+    const doc: ServiceType = {
       id: this.generateId(),
       name: payload.name.trim(),
+      description: payload.description || '',
       status: payload.status || 'Active',
-      type: payload.type || null,
-      contact: payload.contact ? cleanUndefined(payload.contact) : null,
-      address: payload.address ? cleanUndefined(payload.address) : null,
-      note: payload.note || null,
+      type: payload.type || 'Service',
       createdAt: nowIso(),
       updatedAt: nowIso(),
     };
@@ -58,26 +55,26 @@ export class VendorService {
     const cleanDoc = cleanUndefined(doc);
     await this.container.items.create(cleanDoc);
     return cleanDoc;
+  }
 
-   }
-
-    async getById(id: string): Promise<Vendor | null> {
+  async getById(id: string): Promise<ServiceType | null> {
     try {
-      const { resource } = await this.container.item(id, id).read<Vendor>();
+      const { resource } = await this.container.item(id, id).read<ServiceType>();
       return resource ?? null;
     } catch {
       return null;
     }
   }
-  async findAll(): Promise<Vendor[]>{
-    const query: SqlQuerySpec ={
-    query: `SELECT * FROM c ORDER BY c.id`
-  };
-    const {resources} =await this.container.items.query(query).fetchAll()
-    return resources
-  }  
 
-  async find(query: QueryVendorDTO = {}): Promise<{ data: Vendor[]; total: number }> {
+  async findAll(): Promise<ServiceType[]> {
+    const query: SqlQuerySpec = {
+      query: `SELECT * FROM c ORDER BY c.name`
+    };
+    const { resources } = await this.container.items.query(query).fetchAll();
+    return resources;
+  }
+
+  async find(query: QueryServiceTypeDto = {}): Promise<{ data: ServiceType[]; total: number }> {
     const take = Math.max(1, Math.min(query.take ?? 50, 1000)); // Limit between 1-1000
     const skip = Math.max(0, query.skip ?? 0);
 
@@ -96,7 +93,7 @@ export class VendorService {
     }
 
     if (query.q && query.q.trim()) {
-      whereClause += ' AND CONTAINS(LOWER(c.name), LOWER(@q))';
+      whereClause += ' AND (CONTAINS(LOWER(c.name), LOWER(@q)) OR CONTAINS(LOWER(c.description), LOWER(@q)))';
       parameters.push({ name: '@q', value: query.q.trim() });
     }
 
@@ -106,7 +103,7 @@ export class VendorService {
     };
 
     try {
-      const { resources } = await this.container.items.query<Vendor>(q).fetchAll();
+      const { resources } = await this.container.items.query<ServiceType>(q).fetchAll();
       const total = resources.length;
       const data = resources.slice(skip, skip + take);
 
@@ -117,7 +114,7 @@ export class VendorService {
       const fallbackQuery: SqlQuerySpec = {
         query: 'SELECT * FROM c ORDER BY c.name'
       };
-      const { resources } = await this.container.items.query<Vendor>(fallbackQuery).fetchAll();
+      const { resources } = await this.container.items.query<ServiceType>(fallbackQuery).fetchAll();
       const total = resources.length;
       const data = resources.slice(skip, skip + take);
 
@@ -125,19 +122,19 @@ export class VendorService {
     }
   }
 
-  async update(id: string, payload: UpdateVendorDTO): Promise<Vendor> {
+  async update(id: string, payload: UpdateServiceTypeDto): Promise<ServiceType> {
     const current = await this.getById(id);
-    if (!current) throw new Error('vendor not found');
+    if (!current) throw new Error('service type not found');
 
     // Validar nombre duplicado si cambia
     if (payload.name && payload.name.trim().toLowerCase() !== current.name.toLowerCase()) {
       const dup = await this.find({ q: payload.name, take: 1 });
-      if (dup.data.some(v => v.id !== id && v.name.toLowerCase() === payload.name!.trim().toLowerCase())) {
-        throw new Error('vendor with same name already exists');
+      if (dup.data.some(st => st.id !== id && st.name.toLowerCase() === payload.name!.trim().toLowerCase())) {
+        throw new Error('service type with same name already exists');
       }
     }
 
-    const next: Vendor = {
+    const next: ServiceType = {
       ...current,
       ...payload,
       name: payload.name ? payload.name.trim() : current.name,
@@ -151,17 +148,12 @@ export class VendorService {
   async delete(id: string): Promise<void> {
     // Si no existe, lanzará 404 → lo tratamos como error de negocio
     const found = await this.getById(id);
-    if (!found) throw new Error('vendor not found');
+    if (!found) throw new Error('service type not found');
     await this.container.item(id, id).delete();
   }
 
-
-    private generateId(): string {
-      return `vend_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    }
-
-// Buscar vendors por status
-  async findByStatus(status: "Active" | "Inactive"): Promise<Vendor[]> {
+  // Buscar service types por status
+  async findByStatus(status: ServiceTypeStatus): Promise<ServiceType[]> {
     const q: SqlQuerySpec = {
       query: `
         SELECT * FROM c
@@ -171,12 +163,27 @@ export class VendorService {
       parameters: [{ name: "@status", value: status }],
     };
 
-    const { resources } = await this.container.items.query<Vendor>(q).fetchAll();
+    const { resources } = await this.container.items.query<ServiceType>(q).fetchAll();
     return resources;
   }
 
-  // Buscar vendors por status Y type
-  async findByStatusAndType(status: VendorStatus, type: VendorType): Promise<Vendor[]> {
+  // Buscar service types por type
+  async findByType(type: ServiceTypeType): Promise<ServiceType[]> {
+    const q: SqlQuerySpec = {
+      query: `
+        SELECT * FROM c
+        WHERE c.type = @type
+        ORDER BY c.name
+      `,
+      parameters: [{ name: "@type", value: type }],
+    };
+
+    const { resources } = await this.container.items.query<ServiceType>(q).fetchAll();
+    return resources;
+  }
+
+  // Buscar service types por status Y type
+  async findByStatusAndType(status: ServiceTypeStatus, type: ServiceTypeType): Promise<ServiceType[]> {
     const q: SqlQuerySpec = {
       query: `
         SELECT * FROM c
@@ -189,15 +196,15 @@ export class VendorService {
       ],
     };
 
-    const { resources } = await this.container.items.query<Vendor>(q).fetchAll();
+    const { resources } = await this.container.items.query<ServiceType>(q).fetchAll();
     return resources;
   }
 
-  async bulkImport(vendors: Vendor[]): Promise<{ success: Vendor[]; errors: { item: any; error: string }[] }> {
-    const success: Vendor[] = [];
+  async bulkImport(serviceTypes: ServiceType[]): Promise<{ success: ServiceType[]; errors: { item: any; error: string }[] }> {
+    const success: ServiceType[] = [];
     const errors: { item: any; error: string }[] = [];
 
-    for (const item of vendors) {
+    for (const item of serviceTypes) {
       try {
         // Validate required fields
         if (!item.id?.trim()) {
@@ -209,29 +216,20 @@ export class VendorService {
           continue;
         }
 
-        // Check if vendor with same ID already exists
-        const existingById = await this.getById(item.id);
-        if (existingById) {
-          errors.push({ item, error: `vendor with id '${item.id}' already exists` });
-          continue;
-        }
-
-        // Check if vendor with same name already exists
-        const existingByName = await this.find({ q: item.name.trim(), take: 1 });
-        if (existingByName.data.some(v => v.name.toLowerCase() === item.name.trim().toLowerCase())) {
-          errors.push({ item, error: `vendor with name '${item.name}' already exists` });
+        // Check if item with same ID already exists
+        const existing = await this.getById(item.id);
+        if (existing) {
+          errors.push({ item, error: `service type with id '${item.id}' already exists` });
           continue;
         }
 
         // Create the document with provided ID
-        const doc: Vendor = {
+        const doc: ServiceType = {
           id: item.id.trim(),
           name: item.name.trim(),
+          description: item.description || '',
           status: item.status || 'Active',
-          type: item.type || null,
-          contact: item.contact ? cleanUndefined(item.contact) : null,
-          address: item.address ? cleanUndefined(item.address) : null,
-          note: item.note || null,
+          type: item.type || 'Service',
           createdAt: item.createdAt || nowIso(),
           updatedAt: item.updatedAt || nowIso(),
         };
@@ -242,7 +240,7 @@ export class VendorService {
       } catch (error: any) {
         errors.push({
           item,
-          error: error.message || 'Failed to create vendor'
+          error: error.message || 'Failed to create service type'
         });
       }
     }
@@ -250,5 +248,9 @@ export class VendorService {
     return { success, errors };
   }
 
+  private generateId(): string {
+    return `st_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  }
 }
-export const vendorService = new VendorService();
+
+export const serviceTypeService = new ServiceTypeService();

@@ -7,7 +7,7 @@ export class VendorModule{
 
     constructor(){
         this.vendorService = new VendorService();
-        this.vendorController = new VendorController(this.vendorService);
+        this.vendorController = new VendorController();
 
     }
 
