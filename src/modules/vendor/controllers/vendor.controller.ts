@@ -7,144 +7,233 @@ import{
 import { Vendor, VendorEntity, VendorStatus, VendorType } from "../entities/vendor.entity";
 import { CreateVendorDTO } from "../dto/create-vendor.dto";
 import { UpdateVendorDTO } from "../dto/update-vendor.dto";
-import { VendorService } from "../services/vendor.service";
+import { vendorService, VendorService } from "../services/vendor.service";
+import { QueryVendorDTO } from "../dto/query-vendor.dto";
 
 const vendorsRoute = "v1/vendors"
 export class VendorController{
-    constructor(private readonly vendorService : VendorService){}
-
-    async create(createVendorDTO : CreateVendorDTO): Promise<Vendor>{
-        return this.vendorService.create(createVendorDTO);
+   
+   // POST /vendors
+  async postOne(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const body = (await request.json()) as Omit<Vendor, "id" | "createdAt" | "updatedAt">;
+      const created = await vendorService.create(body);
+      return { status: 201, jsonBody: { message: "Created", data: created } };
+    } catch (err: any) {
+      context.error("vendor.postOne error", err);
+      return this.toError(err);
     }
+  }
 
-    async findAll(): Promise<Vendor[]>{
-        return this.vendorService.findAll();
+  // POST /vendors/import
+  async importList(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const body = (await request.json()) as Vendor[];
+
+      if (!Array.isArray(body)) {
+        return { status: 400, jsonBody: { message: "Request body must be an array of vendors" } };
+      }
+
+      if (body.length === 0) {
+        return { status: 400, jsonBody: { message: "Array cannot be empty" } };
+      }
+
+      const result = await vendorService.bulkImport(body);
+
+      const response = {
+        message: "Import completed",
+        summary: {
+          total: body.length,
+          success: result.success.length,
+          errors: result.errors.length
+        },
+        data: result.success,
+        errors: result.errors
+      };
+
+      // Return 207 (Multi-Status) if there were some errors, 201 if all succeeded
+      const status = result.errors.length > 0 ? 207 : 201;
+
+      return { status, jsonBody: response };
+    } catch (err: any) {
+      context.error("vendor.importList error", err);
+      return this.toError(err);
     }
+  }
 
-    async findOne(id: string): Promise<Vendor | null>{
-        return this.vendorService.findOne(id);
+  // GET /vendors/{id}
+  async getOne(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const id = request.params.id;
+      if (!id) return { status: 400, jsonBody: { message: "Missing id" } };
+
+      const found = await vendorService.getById(id);
+      if (!found) return { status: 404, jsonBody: { message: "Not found" } };
+
+      return { status: 200, jsonBody: { data: found } };
+    } catch (err: any) {
+      context.error("vendor.getOne error", err);
+      return this.toError(err);
     }
+  }
 
-    async update(
-        id: string,
-        updateVendorDto : UpdateVendorDTO
-    ): Promise <Vendor | null>{
-        return this.vendorService.update(id, updateVendorDto);
+  // GET /vendors?q=&status=&type=&skip=&take=
+  async getMany(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const url = new URL(request.url);
+
+      const query: QueryVendorDTO = {
+        q: url.searchParams.get("q") ?? undefined,
+        status: (url.searchParams.get("status") as VendorStatus) ?? undefined,
+        type: (url.searchParams.get("type") as VendorType) ?? undefined,
+        skip: url.searchParams.get("skip") ? Number(url.searchParams.get("skip")) : undefined,
+        take: url.searchParams.get("take") ? Number(url.searchParams.get("take")) : undefined,
+      };
+
+      const { data, total } = await vendorService.find(query);
+      //const data =await vendorService.findAll()
+      return { status: 200, jsonBody: { data, total } };
+    } catch (err: any) {
+      context.error("vendor.getMany error", err);
+      return this.toError(err);
     }
+  }
 
-    async remove(id: string): Promise<void> {
-       return this.vendorService.remove(id);
+  // PUT /vendors/{id}
+  async putOne(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const id = request.params.id;
+      if (!id) return { status: 400, jsonBody: { message: "Missing id" } };
+
+      const body = (await request.json()) as UpdateVendorDTO;
+      const updated = await vendorService.update(id, body);
+      return { status: 200, jsonBody: { message: "OK", data: updated } };
+    } catch (err: any) {
+      context.error("vendor.putOne error", err);
+      return this.toError(err);
     }
+  }
 
-    async findByStatus(status: "Active" | "Inactive"): Promise<Vendor[]> {
-        return this.vendorService.findByStatus(status);
+  // DELETE /vendors/{id}
+  async deleteOne(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const id = request.params.id;
+      if (!id) return { status: 400, jsonBody: { message: "Missing id" } };
+
+      await vendorService.delete(id);
+      return { status: 204 };
+    } catch (err: any) {
+      context.error("vendor.deleteOne error", err);
+      return this.toError(err);
     }
+  }
 
-    async findByStatusAndType(status: VendorStatus, type : VendorType): Promise<Vendor[]>{
-        return this.vendorService.findByStatusAndType(status,type);
+  // GET /vendors/by-status/{status}
+  async getByStatus(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const status = request.params.status as VendorStatus;
+      if (!status || !["Active", "Inactive"].includes(status)) {
+        return { status: 400, jsonBody: { message: "Invalid status. Must be 'Active' or 'Inactive'" } };
+      }
+
+      const vendors = await vendorService.findByStatus(status);
+      return { status: 200, jsonBody: { data: vendors } };
+    } catch (err: any) {
+      context.error("vendor.getByStatus error", err);
+      return this.toError(err);
     }
+  }
 
+  // GET /vendors/by-status-type/{status}/{type}
+  async getByStatusAndType(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const status = request.params.status as VendorStatus;
+      const type = request.params.type as VendorType;
+
+      if (!status || !["Active", "Inactive"].includes(status)) {
+        return { status: 400, jsonBody: { message: "Invalid status. Must be 'Active' or 'Inactive'" } };
+      }
+
+      if (!type) {
+        return { status: 400, jsonBody: { message: "Type parameter is required" } };
+      }
+
+      const vendors = await vendorService.findByStatusAndType(status, type);
+      return { status: 200, jsonBody: { data: vendors } };
+    } catch (err: any) {
+      context.error("vendor.getByStatusAndType error", err);
+      return this.toError(err);
+    }
+  }
+
+  // Mapeo de errores a HTTP
+  private toError(err: any): HttpResponseInit {
+    const msg = String(err?.message ?? "Internal error");
+    const status =
+      /not found/i.test(msg) ? 404 :
+      /already exists/i.test(msg) ? 409 :
+      /required|invalid/i.test(msg) ? 400 :
+      500;
+
+    return { status, jsonBody: { message: msg } };
+  }  
     
-    
-    
-
 }
 
-    //const vendorService : new VendorService();
-   // const vendorController : new VendorController(vendorService);
+export const vendorController = new VendorController();
+  
+app.http("PostVendor", {
+  methods: ["POST"],
+  route: vendorsRoute,
+  authLevel: "function",
+  handler: (req, ctx) => vendorController.postOne(req, ctx),
+});
 
-    export async function vendorGet(
-        request: HttpRequest,
-        context: InvocationContext
-    ): Promise<HttpResponseInit>{
-        try {
-        return {
-            status: 200,
-            jsonBody: {message: "Here are all the vendor"}
-        }
-        } catch (error) {
-        return{
-            status:500,
-            jsonBody: {error: "There is not vendor"}
-        }
-        }
-    }
+app.http("ImportVendors", {
+  methods: ["POST"],
+  route: `${vendorsRoute}/import`,
+  authLevel: "function",
+  handler: (req, ctx) => vendorController.importList(req, ctx),
+});
 
-    export async function vendorPost(
-    request: HttpRequest,
-    context: InvocationContext
-  ): Promise<HttpResponseInit>{
-    try {
-      return {
-        status: 200,
-        jsonBody: {message: "Post vendor is ready"}
-      }
-    } catch (error) {
-      return {
-        status: 500,
-        jsonBody: {message: "Post vendor is not ready"}
-      }
-    }
-  }
+app.http("GetVendor", {
+  methods: ["GET"],
+  route: `${vendorsRoute}/{id}`,
+  authLevel: "function",
+  handler: (req, ctx) => vendorController.getOne(req, ctx),
+});
 
-  export async function vendorDelete(
-    request: HttpRequest,
-    context: InvocationContext
-  ): Promise<HttpResponseInit>{
-    try {
-      return {
-        status: 200,
-        jsonBody: {message: "Delete vendor is ready"}
-      }
-    } catch (error) {
-      return {
-        status: 500,
-        jsonBody: {message: "Delete vendor is not ready"}
-      }
-    }
-  }
+app.http("ListVendors", {
+  methods: ["GET"],
+  route: vendorsRoute,
+  authLevel: "function",
+  handler: (req, ctx) => vendorController.getMany(req, ctx),
+});
 
-  export async function vendorPut(
-    request: HttpRequest,
-    context: InvocationContext
-  ): Promise<HttpResponseInit>{
-    try {
-      return {
-        status: 200,
-        jsonBody: {message: "Put vendor is ready"}
-      }
-    } catch (error) {
-      return {
-        status: 500,
-        jsonBody: {message: "Put vendor is not ready"}
-      }
-    }
-  }
+app.http("PutVendor", {
+  methods: ["PUT"],
+  route: `${vendorsRoute}/{id}`,
+  authLevel: "function",
+  handler: (req, ctx) => vendorController.putOne(req, ctx),
+});
 
-    app.http( "vendor-get-all", {
-        methods: ["GET"],
-        authLevel: "anonymous",
-        route:vendorsRoute,
-        handler: vendorGet,
-      });
+app.http("DeleteVendor", {
+  methods: ["DELETE"],
+  route: `${vendorsRoute}/{id}`,
+  authLevel: "function",
+  handler: (req, ctx) => vendorController.deleteOne(req, ctx),
+});
 
-    app.http("vendor-post", {
-          methods: ["POST"],
-          authLevel: "anonymous",
-          route: vendorsRoute,
-          handler:vendorPost,
-        });
-      
-    app.http("vendor-delete", {
-          methods: ["DELETE"],
-          authLevel: "anonymous",
-          route: vendorsRoute,
-          handler:vendorDelete,
-        });
+app.http("GetVendorsByStatus", {
+  methods: ["GET"],
+  route: `${vendorsRoute}/by-status/{status}`,
+  authLevel: "function",
+  handler: (req, ctx) => vendorController.getByStatus(req, ctx),
+});
 
-    app.http("vendor-put", {
-          methods: ["PUT"],
-          authLevel: "anonymous",
-          route: vendorsRoute,
-          handler:vendorPut,
-        });    
+app.http("GetVendorsByStatusAndType", {
+  methods: ["GET"],
+  route: `${vendorsRoute}/by-status-type/{status}/{type}`,
+  authLevel: "function",
+  handler: (req, ctx) => vendorController.getByStatusAndType(req, ctx),
+});
