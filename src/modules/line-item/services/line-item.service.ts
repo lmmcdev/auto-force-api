@@ -4,6 +4,7 @@ import { LineItem, LineItemType } from '../entities/line-item.entity';
 import { CreateLineItemDto } from '../dto/create-line-item.dto';
 import { UpdateLineItemDto } from '../dto/update-line-item.dto';
 import { QueryLineItemDto } from '../dto/query-line-item.dto';
+import { invoiceService } from '../../invoice/services/invoice.service';
 
 function nowIso() { return new Date().toISOString(); }
 
@@ -92,6 +93,15 @@ export class LineItemService {
 
     const cleanDoc = cleanUndefined(doc);
     await this.container.items.create(cleanDoc);
+
+    // Update the invoice amount automatically
+    try {
+      await invoiceService.updateInvoiceAmount(payload.invoiceId);
+    } catch (error) {
+      console.error(`Failed to update invoice amount for invoice ${payload.invoiceId}:`, error);
+      // Don't throw error - line item was created successfully
+    }
+
     return cleanDoc;
   }
 
@@ -248,6 +258,12 @@ export class LineItemService {
     const quantity = payload.quantity !== undefined ? Number(payload.quantity.toFixed(2)) : current.quantity;
     const totalPrice = Number((unitPrice * quantity).toFixed(2));
 
+    // Check if total price changed or invoice ID changed
+    const totalPriceChanged = totalPrice !== current.totalPrice;
+    const invoiceIdChanged = payload.invoiceId && payload.invoiceId !== current.invoiceId;
+    const oldInvoiceId = current.invoiceId;
+    const newInvoiceId = payload.invoiceId || current.invoiceId;
+
     const next: LineItem = {
       ...current,
       ...payload,
@@ -260,13 +276,40 @@ export class LineItemService {
     };
 
     await this.container.item(id, id).replace(next);
+
+    // Update invoice amounts if necessary
+    if (totalPriceChanged || invoiceIdChanged) {
+      try {
+        // Update the new/current invoice amount
+        await invoiceService.updateInvoiceAmount(newInvoiceId);
+
+        // If invoice ID changed, also update the old invoice amount
+        if (invoiceIdChanged && oldInvoiceId !== newInvoiceId) {
+          await invoiceService.updateInvoiceAmount(oldInvoiceId);
+        }
+      } catch (error) {
+        console.error(`Failed to update invoice amounts:`, error);
+        // Don't throw error - line item was updated successfully
+      }
+    }
+
     return next;
   }
 
   async delete(id: string): Promise<void> {
     const found = await this.getById(id);
     if (!found) throw new Error('line item not found');
+
+    const invoiceId = found.invoiceId;
     await this.container.item(id, id).delete();
+
+    // Update the invoice amount after deleting the line item
+    try {
+      await invoiceService.updateInvoiceAmount(invoiceId);
+    } catch (error) {
+      console.error(`Failed to update invoice amount for invoice ${invoiceId}:`, error);
+      // Don't throw error - line item was deleted successfully
+    }
   }
 
   // Find by invoice ID
@@ -384,6 +427,22 @@ export class LineItemService {
           item,
           error: error.message || 'Failed to create line item'
         });
+      }
+    }
+
+    // Update invoice amounts for all affected invoices
+    if (success.length > 0) {
+      // Get unique invoice IDs from successfully imported line items
+      const uniqueInvoiceIds = [...new Set(success.map(item => item.invoiceId))];
+
+      // Update each invoice amount
+      for (const invoiceId of uniqueInvoiceIds) {
+        try {
+          await invoiceService.updateInvoiceAmount(invoiceId);
+        } catch (error) {
+          console.error(`Failed to update invoice amount for invoice ${invoiceId} during bulk import:`, error);
+          // Don't add to errors - line items were imported successfully
+        }
       }
     }
 

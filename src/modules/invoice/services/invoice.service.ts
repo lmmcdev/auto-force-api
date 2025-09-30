@@ -1,5 +1,5 @@
 import { SqlQuerySpec } from '@azure/cosmos';
-import { getInvoicesContainer, getVehiclesContainer, getVendorsContainer } from '../../../infra/cosmos';
+import { getInvoicesContainer, getVehiclesContainer, getVendorsContainer, getLineItemsContainer } from '../../../infra/cosmos';
 import { Invoice, InvoiceStatus } from '../entities/invoice.entity';
 import { CreateInvoiceDto } from '../dto/create-invoice.dto';
 import { UpdateInvoiceDto } from '../dto/update-invoice.dto';
@@ -34,6 +34,10 @@ export class InvoiceService {
 
   private get vendorsContainer() {
     return getVendorsContainer();
+  }
+
+  private get lineItemsContainer() {
+    return getLineItemsContainer();
   }
 
   async create(payload: Omit<Invoice, "id" | "createdAt" | "updatedAt">): Promise<Invoice> {
@@ -345,6 +349,43 @@ export class InvoiceService {
     }
 
     return { success, errors };
+  }
+
+  // Update invoice amount by calculating sum of all line items' total prices
+  async updateInvoiceAmount(id: string): Promise<Invoice> {
+    // Validate that invoice exists
+    const invoice = await this.getById(id);
+    if (!invoice) {
+      throw new Error(`Invoice with id '${id}' not found`);
+    }
+
+    // Get all line items for this invoice
+    const lineItemsQuery: SqlQuerySpec = {
+      query: 'SELECT * FROM c WHERE c.invoiceId = @invoiceId',
+      parameters: [{ name: '@invoiceId', value: id }]
+    };
+
+    const { resources: lineItems } = await this.lineItemsContainer.items.query(lineItemsQuery).fetchAll();
+
+    // Calculate total amount from line items
+    const totalAmount = lineItems.reduce((sum, lineItem) => {
+      return sum + (lineItem.totalPrice || 0);
+    }, 0);
+
+    // Format to 2 decimal places
+    const formattedAmount = Number(totalAmount.toFixed(2));
+
+    // Update the invoice with the new amount
+    const updatedInvoice: Invoice = {
+      ...invoice,
+      invoiceAmount: formattedAmount,
+      updatedAt: nowIso()
+    };
+
+    // Save the updated invoice
+    await this.container.item(id, id).replace(updatedInvoice);
+
+    return updatedInvoice;
   }
 
   private generateId(): string {
