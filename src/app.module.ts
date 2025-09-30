@@ -3,6 +3,7 @@ import { HealthModule } from './modules/health/health.module';
 import { VendorModule } from './modules/vendor/vendor.module';
 import { ServiceTypeModule } from './modules/service-type/service-type.module';
 import { InvoiceModule } from './modules/invoice/invoice.module';
+import { LineItemModule } from './modules/line-item/line-item.module';
 
 
 export class AppModule {
@@ -11,6 +12,7 @@ export class AppModule {
   private vendorModule : VendorModule;
   private serviceTypeModule: ServiceTypeModule;
   private invoiceModule: InvoiceModule;
+  private lineItemModule: LineItemModule;
 
   constructor() {
     this.vehicleModule = new VehicleModule();
@@ -18,6 +20,7 @@ export class AppModule {
     this.vendorModule = new VendorModule();
     this.serviceTypeModule = new ServiceTypeModule();
     this.invoiceModule = new InvoiceModule();
+    this.lineItemModule = new LineItemModule();
   }
 
   getVehicleModule(): VehicleModule {
@@ -39,13 +42,18 @@ export class AppModule {
     return this.invoiceModule;
   }
 
+  getLineItemModule(): LineItemModule {
+    return this.lineItemModule;
+  }
+
   getModules() {
     return {
       vehicle: this.vehicleModule,
       health: this.healthModule,
       vendor: this.vendorModule,
       serviceType: this.serviceTypeModule,
-      invoice: this.invoiceModule
+      invoice: this.invoiceModule,
+      lineItem: this.lineItemModule
     };
   }
 }

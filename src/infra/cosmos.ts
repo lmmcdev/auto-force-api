@@ -7,6 +7,7 @@ const vendorsContainerName = process.env.COSMOS_DB_CONTAINER_VENDORS!;
 const vehiclesContainerName = process.env.COSMOS_DB_CONTAINER_VEHICLES!;
 const serviceTypesContainerName = process.env.COSMOS_DB_CONTAINER_SERVICE_TYPES || 'service-types';
 const invoicesContainerName = process.env.COSMOS_DB_CONTAINER_INVOICES || 'invoices';
+const lineItemsContainerName = process.env.COSMOS_DB_CONTAINER_LINE_ITEMS || 'line-items';
 
 // Cliente único para toda la app
 const client = new CosmosClient(connection);
@@ -16,6 +17,7 @@ let vendorsContainer: Container;
 let vehiclesContainer: Container;
 let serviceTypesContainer: Container;
 let invoicesContainer: Container;
+let lineItemsContainer: Container;
 
 /**
  * En DEV: createIfNotExists para que corra out-of-the-box.
@@ -66,6 +68,13 @@ export async function initCosmos(): Promise<void> {
     }
   });
   invoicesContainer = invCont;
+
+  // line-items
+  const { container: liCont } = await database.containers.createIfNotExists({
+    id: lineItemsContainerName,
+    partitionKey: { paths: ['/id'] }
+  });
+  lineItemsContainer = liCont;
 }
 
 export function getVendorsContainer(): Container {
@@ -86,4 +95,9 @@ export function getServiceTypesContainer(): Container {
 export function getInvoicesContainer(): Container {
   if (!invoicesContainer) throw new Error('Cosmos not initialized: invoices container');
   return invoicesContainer;
+}
+
+export function getLineItemsContainer(): Container {
+  if (!lineItemsContainer) throw new Error('Cosmos not initialized: line-items container');
+  return lineItemsContainer;
 }
