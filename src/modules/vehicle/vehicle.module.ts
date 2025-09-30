@@ -7,7 +7,7 @@ export class VehicleModule {
 
   constructor() {
     this.vehicleService = new VehicleService();
-    this.vehicleController = new VehicleController(this.vehicleService);
+    this.vehicleController = new VehicleController();
   }
 
   getController(): VehicleController {

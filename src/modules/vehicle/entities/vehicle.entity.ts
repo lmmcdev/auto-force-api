@@ -18,6 +18,8 @@ export interface Vehicle {
   make: string;
   color: string;
   year: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export class VehicleEntity implements Vehicle {
@@ -40,6 +42,8 @@ export class VehicleEntity implements Vehicle {
   make: string;
   color: string;
   year: number;
+  createdAt?: string;
+  updatedAt?: string;
 
   constructor(vehicle: Partial<Vehicle> = {}) {
     this.id = vehicle.id || '';
@@ -61,5 +65,6 @@ export class VehicleEntity implements Vehicle {
     this.make = vehicle.make || '';
     this.color = vehicle.color || '';
     this.year = vehicle.year || new Date().getFullYear();
+    
   }
 }
