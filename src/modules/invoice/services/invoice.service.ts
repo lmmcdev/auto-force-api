@@ -81,6 +81,7 @@ export class InvoiceService {
       orderStartDate: payload.orderStartDate,
       uploadDate: payload.uploadDate,
       invoiceAmount: Number(payload.invoiceAmount.toFixed(2)),
+      subTotal: Number(payload.subTotal.toFixed(2)),
       status: payload.status || 'Pending',
       tax: Number((payload.tax || 0).toFixed(2)),
       description: payload.description || '',
@@ -367,18 +368,36 @@ export class InvoiceService {
 
     const { resources: lineItems } = await this.lineItemsContainer.items.query(lineItemsQuery).fetchAll();
 
-    // Calculate total amount from line items
-    const totalAmount = lineItems.reduce((sum, lineItem) => {
+    // Calculate subTotal from all line items
+    const subTotal = lineItems.reduce((sum, lineItem) => {
       return sum + (lineItem.totalPrice || 0);
     }, 0);
 
-    // Format to 2 decimal places
-    const formattedAmount = Number(totalAmount.toFixed(2));
+    // Calculate tax from taxable line items only
+    const taxableTotal = lineItems.reduce((sum, lineItem) => {
+      if (lineItem.taxable === true) {
+        return sum + (lineItem.totalPrice || 0);
+      }
+      return sum;
+    }, 0);
 
-    // Update the invoice with the new amount
+    // Assuming a default tax rate - you might want to make this configurable
+    // For now, using the existing tax rate or calculating as a percentage
+    // If you have a specific tax rate, replace this calculation
+    const taxRate = 0.07; // 7% tax rate - adjust as needed
+    const calculatedTax = taxableTotal * taxRate;
+
+    // Format amounts to 2 decimal places
+    const formattedSubTotal = Number(subTotal.toFixed(2));
+    const formattedTax = Number(calculatedTax.toFixed(2));
+    const formattedInvoiceAmount = Number((formattedSubTotal + formattedTax).toFixed(2));
+
+    // Update the invoice with calculated amounts
     const updatedInvoice: Invoice = {
       ...invoice,
-      invoiceAmount: formattedAmount,
+      invoiceAmount: formattedInvoiceAmount, // subTotal + tax
+      tax: formattedTax,                    // calculated tax from taxable items
+      subTotal : formattedSubTotal,
       updatedAt: nowIso()
     };
 

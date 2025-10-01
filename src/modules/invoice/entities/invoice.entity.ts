@@ -8,6 +8,7 @@ export interface Invoice {
   orderStartDate: string; // ISO date string
   uploadDate: string;     // ISO date string
   invoiceAmount: number;  // Number with two decimal places
+  subTotal : number;
   status: InvoiceStatus;
   tax: number;           // Number with two decimal places
   description: string;
@@ -23,6 +24,7 @@ export class InvoiceEntity implements Invoice {
   orderStartDate: string;
   uploadDate: string;
   invoiceAmount: number;
+  subTotal: number;
   status: InvoiceStatus;
   tax: number;
   description: string;
@@ -37,6 +39,7 @@ export class InvoiceEntity implements Invoice {
     this.orderStartDate = invoice.orderStartDate || '';
     this.uploadDate = invoice.uploadDate || '';
     this.invoiceAmount = invoice.invoiceAmount || 0;
+    this.subTotal = invoice.subTotal || 0;
     this.status = invoice.status || 'Pending';
     this.tax = invoice.tax || 0;
     this.description = invoice.description || '';

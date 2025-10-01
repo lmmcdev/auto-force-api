@@ -258,9 +258,10 @@ export class LineItemService {
     const quantity = payload.quantity !== undefined ? Number(payload.quantity.toFixed(2)) : current.quantity;
     const totalPrice = Number((unitPrice * quantity).toFixed(2));
 
-    // Check if total price changed or invoice ID changed
+    // Check if total price changed, invoice ID changed, or taxable status changed
     const totalPriceChanged = totalPrice !== current.totalPrice;
     const invoiceIdChanged = payload.invoiceId && payload.invoiceId !== current.invoiceId;
+    const taxableChanged = payload.taxable !== undefined && payload.taxable !== current.taxable;
     const oldInvoiceId = current.invoiceId;
     const newInvoiceId = payload.invoiceId || current.invoiceId;
 
@@ -278,7 +279,7 @@ export class LineItemService {
     await this.container.item(id, id).replace(next);
 
     // Update invoice amounts if necessary
-    if (totalPriceChanged || invoiceIdChanged) {
+    if (totalPriceChanged || invoiceIdChanged || taxableChanged) {
       try {
         // Update the new/current invoice amount
         await invoiceService.updateInvoiceAmount(newInvoiceId);
