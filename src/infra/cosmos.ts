@@ -6,6 +6,8 @@ const dbName = process.env.COSMOS_DB_DATABASE!;
 const vendorsContainerName = process.env.COSMOS_DB_CONTAINER_VENDORS!;
 const vehiclesContainerName = process.env.COSMOS_DB_CONTAINER_VEHICLES!;
 const serviceTypesContainerName = process.env.COSMOS_DB_CONTAINER_SERVICE_TYPES || 'service-types';
+const invoicesContainerName = process.env.COSMOS_DB_CONTAINER_INVOICES || 'invoices';
+const lineItemsContainerName = process.env.COSMOS_DB_CONTAINER_LINE_ITEMS || 'line-items';
 
 // Cliente único para toda la app
 const client = new CosmosClient(connection);
@@ -14,6 +16,8 @@ let database: Database;
 let vendorsContainer: Container;
 let vehiclesContainer: Container;
 let serviceTypesContainer: Container;
+let invoicesContainer: Container;
+let lineItemsContainer: Container;
 
 /**
  * En DEV: createIfNotExists para que corra out-of-the-box.
@@ -53,6 +57,24 @@ export async function initCosmos(): Promise<void> {
     }
   });
   serviceTypesContainer = stCont;
+
+  // invoices
+  const { container: invCont } = await database.containers.createIfNotExists({
+    id: invoicesContainerName,
+    partitionKey: { paths: ['/id'] },
+    uniqueKeyPolicy: {
+      // Prevent duplicate invoice numbers
+      uniqueKeys: [{ paths: ['/invoiceNumber'] }]
+    }
+  });
+  invoicesContainer = invCont;
+
+  // line-items
+  const { container: liCont } = await database.containers.createIfNotExists({
+    id: lineItemsContainerName,
+    partitionKey: { paths: ['/id'] }
+  });
+  lineItemsContainer = liCont;
 }
 
 export function getVendorsContainer(): Container {
@@ -68,4 +90,14 @@ export function getVehiclesContainer(): Container {
 export function getServiceTypesContainer(): Container {
   if (!serviceTypesContainer) throw new Error('Cosmos not initialized: service-types container');
   return serviceTypesContainer;
+}
+
+export function getInvoicesContainer(): Container {
+  if (!invoicesContainer) throw new Error('Cosmos not initialized: invoices container');
+  return invoicesContainer;
+}
+
+export function getLineItemsContainer(): Container {
+  if (!lineItemsContainer) throw new Error('Cosmos not initialized: line-items container');
+  return lineItemsContainer;
 }
