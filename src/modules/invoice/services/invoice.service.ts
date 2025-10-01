@@ -82,7 +82,7 @@ export class InvoiceService {
       uploadDate: payload.uploadDate,
       invoiceAmount: Number(payload.invoiceAmount.toFixed(2)),
       subTotal: Number(payload.subTotal.toFixed(2)),
-      status: payload.status || 'Pending',
+      status: payload.status || 'Draft',
       tax: Number((payload.tax || 0).toFixed(2)),
       description: payload.description || '',
       createdAt: nowIso(),
@@ -227,6 +227,10 @@ export class InvoiceService {
       }
     }
 
+    // Check if vehicleId or vendorId is changing
+    const vehicleIdChanged = payload.vehicleId && payload.vehicleId !== current.vehicleId;
+    const vendorIdChanged = payload.vendorId && payload.vendorId !== current.vendorId;
+
     const next: Invoice = {
       ...current,
       ...payload,
@@ -236,6 +240,21 @@ export class InvoiceService {
     };
 
     await this.container.item(id, id).replace(next);
+
+    // Update line items' vehicleId and vendorId if they changed
+    if (vehicleIdChanged || vendorIdChanged) {
+      try {
+        await this.updateLineItemsFields(
+          id,
+          vehicleIdChanged ? next.vehicleId : undefined,
+          vendorIdChanged ? next.vendorId : undefined
+        );
+      } catch (error) {
+        console.error(`Failed to update line items fields for invoice ${id}:`, error);
+        // Don't throw error - invoice was updated successfully
+      }
+    }
+
     return next;
   }
 
@@ -350,6 +369,38 @@ export class InvoiceService {
     }
 
     return { success, errors };
+  }
+
+  // Update all line items' vehicleId and vendorId fields when invoice changes
+  async updateLineItemsFields(id: string, vehicleId?: string, vendorId?: string): Promise<void> {
+    // Get all line items for this invoice
+    const lineItemsQuery: SqlQuerySpec = {
+      query: 'SELECT * FROM c WHERE c.invoiceId = @invoiceId',
+      parameters: [{ name: '@invoiceId', value: id }]
+    };
+
+    const { resources: lineItems } = await this.lineItemsContainer.items.query(lineItemsQuery).fetchAll();
+
+    // Update each line item if vehicleId or vendorId was provided
+    for (const lineItem of lineItems) {
+      let needsUpdate = false;
+      const updatedLineItem = { ...lineItem };
+
+      if (vehicleId !== undefined && lineItem.vehicleId !== vehicleId) {
+        updatedLineItem.vehicleId = vehicleId;
+        needsUpdate = true;
+      }
+
+      if (vendorId !== undefined && lineItem.vendorId !== vendorId) {
+        updatedLineItem.vendorId = vendorId;
+        needsUpdate = true;
+      }
+
+      if (needsUpdate) {
+        updatedLineItem.updatedAt = nowIso();
+        await this.lineItemsContainer.item(lineItem.id, lineItem.id).replace(updatedLineItem);
+      }
+    }
   }
 
   // Update invoice amount by calculating sum of all line items' total prices

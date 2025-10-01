@@ -58,12 +58,14 @@ export class LineItemService {
       throw new Error(`Service type with id '${payload.serviceTypeId}' not found`);
     }
 
-    // Validate that invoice exists
+    // Validate that invoice exists and get vehicleId/vendorId
+    let invoiceData;
     try {
       const invoice = await this.invoicesContainer.item(payload.invoiceId, payload.invoiceId).read();
       if (!invoice.resource) {
         throw new Error(`Invoice with id '${payload.invoiceId}' not found`);
       }
+      invoiceData = invoice.resource;
     } catch (error) {
       throw new Error(`Invoice with id '${payload.invoiceId}' not found`);
     }
@@ -77,6 +79,8 @@ export class LineItemService {
       id: this.generateId(),
       serviceTypeId: payload.serviceTypeId.trim(),
       invoiceId: payload.invoiceId.trim(),
+      vehicleId: invoiceData.vehicleId || '', // Auto-populate from invoice
+      vendorId: invoiceData.vendorId || '',   // Auto-populate from invoice
       unitPrice: unitPrice,
       quantity: quantity,
       totalPrice: totalPrice,
@@ -241,13 +245,15 @@ export class LineItemService {
       }
     }
 
-    // Validate invoice exists if changing invoiceId
+    // Validate invoice exists if changing invoiceId and get vehicleId/vendorId
+    let newInvoiceData;
     if (payload.invoiceId && payload.invoiceId !== current.invoiceId) {
       try {
         const invoice = await this.invoicesContainer.item(payload.invoiceId, payload.invoiceId).read();
         if (!invoice.resource) {
           throw new Error(`Invoice with id '${payload.invoiceId}' not found`);
         }
+        newInvoiceData = invoice.resource;
       } catch (error) {
         throw new Error(`Invoice with id '${payload.invoiceId}' not found`);
       }
@@ -271,6 +277,9 @@ export class LineItemService {
       unitPrice: unitPrice,
       quantity: quantity,
       totalPrice: totalPrice,
+      // Auto-populate vehicleId and vendorId from new invoice if invoiceId changed
+      vehicleId: newInvoiceData ? newInvoiceData.vehicleId : (payload.vehicleId !== undefined ? payload.vehicleId : current.vehicleId),
+      vendorId: newInvoiceData ? newInvoiceData.vendorId : (payload.vendorId !== undefined ? payload.vendorId : current.vendorId),
       mileage: payload.mileage !== undefined ? Math.floor(payload.mileage) : current.mileage,
       warrantyMileage: payload.warrantyMileage !== undefined ? Math.floor(payload.warrantyMileage) : current.warrantyMileage,
       updatedAt: nowIso()
@@ -399,6 +408,20 @@ export class LineItemService {
           continue;
         }
 
+        // Get invoice data to auto-populate vehicleId and vendorId
+        let invoiceData;
+        try {
+          const invoice = await this.invoicesContainer.item(item.invoiceId, item.invoiceId).read();
+          if (!invoice.resource) {
+            errors.push({ item, error: `Invoice with id '${item.invoiceId}' not found` });
+            continue;
+          }
+          invoiceData = invoice.resource;
+        } catch (error) {
+          errors.push({ item, error: `Invoice with id '${item.invoiceId}' not found` });
+          continue;
+        }
+
         // Calculate total price
         const unitPrice = Number(item.unitPrice.toFixed(2));
         const quantity = Number(item.quantity.toFixed(2));
@@ -410,6 +433,8 @@ export class LineItemService {
           id: item.id.trim(),
           serviceTypeId: item.serviceTypeId.trim(),
           invoiceId: item.invoiceId.trim(),
+          vehicleId: invoiceData.vehicleId || '', // Auto-populate from invoice
+          vendorId: invoiceData.vendorId || '',   // Auto-populate from invoice
           unitPrice: unitPrice,
           quantity: quantity,
           totalPrice: totalPrice,

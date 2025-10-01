@@ -4,6 +4,8 @@ export interface LineItem {
   id: string;
   serviceTypeId: string; // Associated with a service-type (required)
   invoiceId: string;     // Associated with an invoice (required)
+  vehicleId: string;     // Associated with a vehicle (inherited from invoice)
+  vendorId: string;      // Associated with a vendor (inherited from invoice)
   unitPrice: number;     // Number with two decimal places
   quantity: number;      // Number with two decimal places
   totalPrice: number;    // Calculated: quantity * unitPrice
@@ -22,6 +24,8 @@ export class LineItemEntity implements LineItem {
   id: string;
   serviceTypeId: string;
   invoiceId: string;
+  vehicleId: string;
+  vendorId: string;
   unitPrice: number;
   quantity: number;
   totalPrice: number;
@@ -39,6 +43,8 @@ export class LineItemEntity implements LineItem {
     this.id = lineItem.id || '';
     this.serviceTypeId = lineItem.serviceTypeId || '';
     this.invoiceId = lineItem.invoiceId || '';
+    this.vehicleId = lineItem.vehicleId || '';
+    this.vendorId = lineItem.vendorId || '';
     this.unitPrice = lineItem.unitPrice || 0;
     this.quantity = lineItem.quantity || 0;
     this.totalPrice = lineItem.totalPrice || this.calculateTotalPrice(this.unitPrice, this.quantity);

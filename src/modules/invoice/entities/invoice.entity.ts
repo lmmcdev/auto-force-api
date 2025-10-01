@@ -1,4 +1,4 @@
-export type InvoiceStatus = 'Pending' | 'Approved' | 'Rejected' | 'Paid' | 'Cancelled';
+export type InvoiceStatus = 'Draft' | 'PendingWarrantyReview'|'Approved' | 'Rejected' | 'Paid' | 'Cancelled';
 
 export interface Invoice {
   id: string;
@@ -40,7 +40,7 @@ export class InvoiceEntity implements Invoice {
     this.uploadDate = invoice.uploadDate || '';
     this.invoiceAmount = invoice.invoiceAmount || 0;
     this.subTotal = invoice.subTotal || 0;
-    this.status = invoice.status || 'Pending';
+    this.status = invoice.status || 'Draft';
     this.tax = invoice.tax || 0;
     this.description = invoice.description || '';
     this.createdAt = invoice.createdAt;
@@ -56,4 +56,6 @@ export class InvoiceEntity implements Invoice {
   static formatAmount(amount: number): number {
     return Number(amount.toFixed(2));
   }
+
+
 }
