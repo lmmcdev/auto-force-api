@@ -71,6 +71,9 @@ export class LineItemService {
       throw new Error(`Invoice with id '${payload.invoiceId}' not found`);
     }
 
+    // Validate invoice status
+    await this.validateInvoiceStatus(payload.invoiceId);
+
     // Calculate total price
     const unitPrice = Number(payload.unitPrice.toFixed(2));
     const quantity = Number(payload.quantity.toFixed(2));
@@ -250,6 +253,9 @@ export class LineItemService {
     const current = await this.getById(id);
     if (!current) throw new Error('line item not found');
 
+    // Validate current invoice status
+    await this.validateInvoiceStatus(current.invoiceId);
+
     // Validate service-type exists if changing serviceTypeId
     if (payload.serviceTypeId && payload.serviceTypeId !== current.serviceTypeId) {
       try {
@@ -274,6 +280,9 @@ export class LineItemService {
       } catch (error) {
         throw new Error(`Invoice with id '${payload.invoiceId}' not found`);
       }
+
+      // Validate new invoice status
+      await this.validateInvoiceStatus(payload.invoiceId);
     }
 
     // Calculate new total price if unit price or quantity changed
@@ -326,6 +335,9 @@ export class LineItemService {
   async delete(id: string): Promise<void> {
     const found = await this.getById(id);
     if (!found) throw new Error('line item not found');
+
+    // Validate invoice status
+    await this.validateInvoiceStatus(found.invoiceId);
 
     const invoiceId = found.invoiceId;
     await this.container.item(id, id).delete();
@@ -436,6 +448,14 @@ export class LineItemService {
           invoiceData = invoice.resource;
         } catch (error) {
           errors.push({ item, error: `Invoice with id '${item.invoiceId}' not found` });
+          continue;
+        }
+
+        // Validate invoice status
+        try {
+          await this.validateInvoiceStatus(item.invoiceId);
+        } catch (error: any) {
+          errors.push({ item, error: error.message || 'Invalid invoice status' });
           continue;
         }
 
@@ -609,6 +629,19 @@ export class LineItemService {
     } catch (error) {
       console.error(`Failed to check warranty mileage for line item ${lineItemId}:`, error);
       // Don't throw error - line item creation should not fail due to alert creation issues
+    }
+  }
+
+  // Helper method to validate invoice status for line item operations
+  private async validateInvoiceStatus(invoiceId: string): Promise<void> {
+    const invoice = await this.invoicesContainer.item(invoiceId, invoiceId).read();
+    if (!invoice.resource) {
+      throw new Error(`Invoice with id '${invoiceId}' not found`);
+    }
+
+    const allowedStatuses = ['Draft', 'PendingWarrantyReview'];
+    if (!allowedStatuses.includes(invoice.resource.status)) {
+      throw new Error(`Cannot modify line items for invoice with status '${invoice.resource.status}'. Allowed statuses: ${allowedStatuses.join(', ')}`);
     }
   }
 
