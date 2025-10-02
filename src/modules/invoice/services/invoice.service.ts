@@ -458,6 +458,15 @@ export class InvoiceService {
     return updatedInvoice;
   }
 
+  // Get order start date by invoice ID
+  async getOrderStartDate(id: string): Promise<string | null> {
+    const invoice = await this.getById(id);
+    if (!invoice) {
+      return null;
+    }
+    return invoice.orderStartDate;
+  }
+
   private generateId(): string {
     return `inv_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   }

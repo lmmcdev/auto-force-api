@@ -5,6 +5,7 @@ import { CreateLineItemDto } from '../dto/create-line-item.dto';
 import { UpdateLineItemDto } from '../dto/update-line-item.dto';
 import { QueryLineItemDto } from '../dto/query-line-item.dto';
 import { invoiceService } from '../../invoice/services/invoice.service';
+import { alertService } from '../../alert/services/alert.service';
 
 function nowIso() { return new Date().toISOString(); }
 
@@ -103,6 +104,14 @@ export class LineItemService {
       await invoiceService.updateInvoiceAmount(payload.invoiceId);
     } catch (error) {
       console.error(`Failed to update invoice amount for invoice ${payload.invoiceId}:`, error);
+      // Don't throw error - line item was created successfully
+    }
+
+    // Check warranty date and create alert if needed
+    try {
+      await this.checkWarrantyDate(doc.vehicleId, doc.id, doc.serviceTypeId, doc.invoiceId);
+    } catch (error) {
+      console.error(`Failed to check warranty date for line item ${doc.id}:`, error);
       // Don't throw error - line item was created successfully
     }
 
@@ -448,6 +457,14 @@ export class LineItemService {
         const cleanDoc = cleanUndefined(doc);
         await this.container.items.create(cleanDoc);
         success.push(cleanDoc);
+
+        // Check warranty date and create alert if needed
+        try {
+          await this.checkWarrantyDate(cleanDoc.vehicleId, cleanDoc.id, cleanDoc.serviceTypeId, cleanDoc.invoiceId);
+        } catch (error) {
+          console.error(`Failed to check warranty date for line item ${cleanDoc.id} during bulk import:`, error);
+          // Don't add to errors - line item was imported successfully
+        }
       } catch (error: any) {
         errors.push({
           item,
@@ -473,6 +490,60 @@ export class LineItemService {
     }
 
     return { success, errors };
+  }
+
+  // Check warranty date and create alert if overlapping warranty exists
+  async checkWarrantyDate(vehicleId: string, lineItemId: string, serviceTypeId: string, invoiceId: string): Promise<void> {
+    try {
+      // Get order start date from invoice
+      const orderStartDate = await invoiceService.getOrderStartDate(invoiceId);
+      if (!orderStartDate) {
+        console.warn(`Cannot get order start date for invoice ${invoiceId}`);
+        return;
+      }
+
+      // Search for line items with overlapping warranty
+      const warrantyQuery: SqlQuerySpec = {
+        query: `SELECT * FROM c WHERE c.id != @lineItemId
+                AND c.vehicleId = @vehicleId
+                AND c.serviceTypeId = @serviceTypeId
+                AND c.warrantyDate >= @orderStartDate
+                ORDER BY c.warrantyDate DESC`,
+        parameters: [
+          { name: '@lineItemId', value: lineItemId },
+          { name: '@vehicleId', value: vehicleId },
+          { name: '@serviceTypeId', value: serviceTypeId },
+          { name: '@orderStartDate', value: orderStartDate }
+        ]
+      };
+
+      const { resources: overlappingWarranties } = await this.container.items.query(warrantyQuery).fetchAll();
+
+      // If overlapping warranties exist, create an alert
+      if (overlappingWarranties.length > 0) {
+        // Get the last (most recent) line item from results
+        const lastLineItem = overlappingWarranties[0]; // Already ordered DESC
+
+        // Create alert
+        await alertService.create({
+          type: 'WARRANTY',
+          category: 'ServiceType',
+          vehicleId: vehicleId,
+          lineItemId: lineItemId,
+          validLineItem: lastLineItem.id,
+          invoiceId: invoiceId,
+          serviceTypeId: serviceTypeId,
+          reasons: 'DATE_VALID',
+          status: 'Pending',
+          message: 'Existing service type has a valid warranty that overlaps with invoice start date.'
+        });
+
+        console.log(`Created warranty overlap alert for line item ${lineItemId}`);
+      }
+    } catch (error) {
+      console.error(`Failed to check warranty date for line item ${lineItemId}:`, error);
+      // Don't throw error - line item creation should not fail due to alert creation issues
+    }
   }
 
   private generateId(): string {
