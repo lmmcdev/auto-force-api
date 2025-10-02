@@ -256,6 +256,9 @@ export class LineItemService {
     // Validate current invoice status
     await this.validateInvoiceStatus(current.invoiceId);
 
+    // Delete all alerts associated with this line item before updating
+    await this.deleteAlertsForLineItem(id);
+
     // Validate service-type exists if changing serviceTypeId
     if (payload.serviceTypeId && payload.serviceTypeId !== current.serviceTypeId) {
       try {
@@ -329,6 +332,22 @@ export class LineItemService {
       }
     }
 
+    // Check warranty date and create alert if needed
+    try {
+      await this.checkWarrantyDate(next.vehicleId, next.id, next.serviceTypeId, next.invoiceId);
+    } catch (error) {
+      console.error(`Failed to check warranty date for line item ${next.id} after update:`, error);
+      // Don't throw error - line item was updated successfully
+    }
+
+    // Check warranty mileage and create alert if needed
+    try {
+      await this.checkWarrantyMileage(next.vehicleId, next.id, next.serviceTypeId, next.mileage, next.invoiceId);
+    } catch (error) {
+      console.error(`Failed to check warranty mileage for line item ${next.id} after update:`, error);
+      // Don't throw error - line item was updated successfully
+    }
+
     return next;
   }
 
@@ -338,6 +357,9 @@ export class LineItemService {
 
     // Validate invoice status
     await this.validateInvoiceStatus(found.invoiceId);
+
+    // Delete all alerts associated with this line item before deleting
+    await this.deleteAlertsForLineItem(id);
 
     const invoiceId = found.invoiceId;
     await this.container.item(id, id).delete();
@@ -629,6 +651,32 @@ export class LineItemService {
     } catch (error) {
       console.error(`Failed to check warranty mileage for line item ${lineItemId}:`, error);
       // Don't throw error - line item creation should not fail due to alert creation issues
+    }
+  }
+
+  // Helper method to delete all alerts associated with a line item
+  private async deleteAlertsForLineItem(lineItemId: string): Promise<void> {
+    try {
+      // Find all alerts with the given lineItemId
+      const alerts = await alertService.findByLineItemId(lineItemId);
+
+      // Delete each alert
+      for (const alert of alerts) {
+        try {
+          await alertService.delete(alert.id);
+          console.log(`Deleted alert ${alert.id} for line item ${lineItemId}`);
+        } catch (error) {
+          console.error(`Failed to delete alert ${alert.id} for line item ${lineItemId}:`, error);
+          // Continue deleting other alerts even if one fails
+        }
+      }
+
+      if (alerts.length > 0) {
+        console.log(`Deleted ${alerts.length} alerts for line item ${lineItemId}`);
+      }
+    } catch (error) {
+      console.error(`Failed to delete alerts for line item ${lineItemId}:`, error);
+      // Don't throw error - line item operation should not fail due to alert deletion issues
     }
   }
 
