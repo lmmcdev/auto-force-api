@@ -115,6 +115,14 @@ export class LineItemService {
       // Don't throw error - line item was created successfully
     }
 
+    // Check warranty mileage and create alert if needed
+    try {
+      await this.checkWarrantyMileage(doc.vehicleId, doc.id, doc.serviceTypeId, doc.mileage, doc.invoiceId);
+    } catch (error) {
+      console.error(`Failed to check warranty mileage for line item ${doc.id}:`, error);
+      // Don't throw error - line item was created successfully
+    }
+
     return cleanDoc;
   }
 
@@ -465,6 +473,14 @@ export class LineItemService {
           console.error(`Failed to check warranty date for line item ${cleanDoc.id} during bulk import:`, error);
           // Don't add to errors - line item was imported successfully
         }
+
+        // Check warranty mileage and create alert if needed
+        try {
+          await this.checkWarrantyMileage(cleanDoc.vehicleId, cleanDoc.id, cleanDoc.serviceTypeId, cleanDoc.mileage, cleanDoc.invoiceId);
+        } catch (error) {
+          console.error(`Failed to check warranty mileage for line item ${cleanDoc.id} during bulk import:`, error);
+          // Don't add to errors - line item was imported successfully
+        }
       } catch (error: any) {
         errors.push({
           item,
@@ -508,6 +524,7 @@ export class LineItemService {
                 AND c.vehicleId = @vehicleId
                 AND c.serviceTypeId = @serviceTypeId
                 AND c.warrantyDate >= @orderStartDate
+                AND c.warranty = true
                 ORDER BY c.warrantyDate DESC`,
         parameters: [
           { name: '@lineItemId', value: lineItemId },
@@ -542,6 +559,55 @@ export class LineItemService {
       }
     } catch (error) {
       console.error(`Failed to check warranty date for line item ${lineItemId}:`, error);
+      // Don't throw error - line item creation should not fail due to alert creation issues
+    }
+  }
+
+  // Check warranty mileage and create alert if overlapping warranty exists
+  async checkWarrantyMileage(vehicleId: string, lineItemId: string, serviceTypeId: string, mileage: number, invoiceId: string): Promise<void> {
+    try {
+      // Search for line items with overlapping warranty mileage
+      const warrantyMileageQuery: SqlQuerySpec = {
+        query: `SELECT * FROM c WHERE c.id != @lineItemId
+                AND c.vehicleId = @vehicleId
+                AND c.serviceTypeId = @serviceTypeId
+                AND (c.mileage + c.warrantyMileage) >= @mileage
+                AND c.warrantyMileage > 0
+                AND c.warranty = true
+                ORDER BY c.mileage DESC`,
+        parameters: [
+          { name: '@lineItemId', value: lineItemId },
+          { name: '@vehicleId', value: vehicleId },
+          { name: '@serviceTypeId', value: serviceTypeId },
+          { name: '@mileage', value: mileage }
+        ]
+      };
+
+      const { resources: overlappingWarranties } = await this.container.items.query(warrantyMileageQuery).fetchAll();
+
+      // If overlapping warranties exist, create an alert
+      if (overlappingWarranties.length > 0) {
+        // Get the last (most recent) line item from results
+        const lastLineItem = overlappingWarranties[0]; // Already ordered DESC by mileage
+
+        // Create alert
+        await alertService.create({
+          type: 'WARRANTY',
+          category: 'ServiceType',
+          vehicleId: vehicleId,
+          lineItemId: lineItemId,
+          validLineItem: lastLineItem.id,
+          invoiceId: invoiceId,
+          serviceTypeId: serviceTypeId,
+          reasons: 'MILEAGE_VALID',
+          status: 'Pending',
+          message: 'Existing service type has a valid warranty that overlaps with current mileage.'
+        });
+
+        console.log(`Created warranty mileage overlap alert for line item ${lineItemId}`);
+      }
+    } catch (error) {
+      console.error(`Failed to check warranty mileage for line item ${lineItemId}:`, error);
       // Don't throw error - line item creation should not fail due to alert creation issues
     }
   }
