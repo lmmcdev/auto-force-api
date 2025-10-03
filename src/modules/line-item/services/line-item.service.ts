@@ -423,6 +423,20 @@ export class LineItemService {
     return resources;
   }
 
+  // Find by serviceTypeId, type, and unitPrice with descending unitPrice order
+  async findByServiceTypeIdAndTypeAndUnitPrice(serviceTypeId: string, type: LineItemType, unitPrice: number): Promise<LineItem[]> {
+    const q: SqlQuerySpec = {
+      query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.unitPrice < @unitPrice ORDER BY c.unitPrice ASC',
+      parameters: [
+        { name: '@serviceTypeId', value: serviceTypeId },
+        { name: '@type', value: type },
+        { name: '@unitPrice', value: unitPrice }
+      ]
+    };
+    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    return resources;
+  }
+
   // Bulk import
   async bulkImport(lineItems: LineItem[]): Promise<{ success: LineItem[]; errors: { item: any; error: string }[] }> {
     const success: LineItem[] = [];
