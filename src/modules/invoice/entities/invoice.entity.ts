@@ -1,4 +1,4 @@
-export type InvoiceStatus = 'Draft' | 'PendingWarrantyReview'|'Approved' | 'Rejected' | 'Paid' | 'Cancelled';
+export type InvoiceStatus = 'Draft' | 'PendingAlertReview'|'Approved' | 'Rejected' | 'Paid' | 'Cancelled';
 
 export interface Invoice {
   id: string;

@@ -61,8 +61,8 @@ export class AlertService {
       try {
         const currentStatus = await invoiceService.getStatusById(cleanDoc.invoiceId);
         if (currentStatus === 'Draft') {
-          await invoiceService.changeStatusToPendingWarrantyReview(cleanDoc.invoiceId);
-          console.log(`Changed invoice ${cleanDoc.invoiceId} status from Draft to PendingWarrantyReview due to alert creation`);
+          await invoiceService.changeStatusToPendingAlertReview(cleanDoc.invoiceId);
+          console.log(`Changed invoice ${cleanDoc.invoiceId} status from Draft to PendingAlertReview due to alert creation`);
         }
       } catch (error) {
         console.error(`Failed to change invoice status for invoice ${cleanDoc.invoiceId}:`, error);
@@ -214,10 +214,10 @@ export class AlertService {
         // Check if invoice should be changed back to Draft
         await this.checkAndChangeInvoiceStatusToDraft(next.invoiceId);
       } else if (statusChangedToPending) {
-        // Change invoice status to PendingWarrantyReview
+        // Change invoice status to PendingAlertReview
         try {
-          await invoiceService.changeStatusToPendingWarrantyReview(next.invoiceId);
-          console.log(`Changed invoice ${next.invoiceId} status to PendingWarrantyReview due to alert status change to Pending`);
+          await invoiceService.changeStatusToPendingAlertReview(next.invoiceId);
+          console.log(`Changed invoice ${next.invoiceId} status to PendingAlertReview due to alert status change to Pending`);
         } catch (error) {
           console.error(`Failed to change invoice status for invoice ${next.invoiceId}:`, error);
           // Don't throw error - alert was updated successfully

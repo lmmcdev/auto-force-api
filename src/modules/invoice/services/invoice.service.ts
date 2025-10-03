@@ -203,17 +203,17 @@ export class InvoiceService {
     const current = await this.getById(id);
     if (!current) throw new Error('invoice not found');
 
-    // Validate that invoice with 'PendingWarrantyReview' status cannot change to other statuses if pending alerts exist
+    // Validate that invoice with 'PendingAlertReview' status cannot change to other statuses if pending alerts exist
     if (payload.status &&
-        current.status === 'PendingWarrantyReview' &&
-        payload.status !== 'PendingWarrantyReview') {
+        current.status === 'PendingAlertReview' &&
+        payload.status !== 'PendingAlertReview') {
 
       // Import AlertService dynamically to avoid circular dependency
       const { alertService } = await import('../../alert/services/alert.service');
       const alerts = await alertService.getAlertsByInvoiceIdAndStatus(id, 'Pending');
 
       if (alerts.length > 0) {
-        throw new Error(`Cannot change invoice status from 'PendingWarrantyReview' to '${payload.status}' because there are ${alerts.length} pending alert(s) for this invoice`);
+        throw new Error(`Cannot change invoice status from 'PendingAlertReview' to '${payload.status}' because there are ${alerts.length} pending alert(s) for this invoice`);
       }
     }
 
@@ -490,8 +490,8 @@ export class InvoiceService {
     return invoice.status;
   }
 
-  // Change invoice status to PendingWarrantyReview
-  async changeStatusToPendingWarrantyReview(id: string): Promise<Invoice | null> {
+  // Change invoice status to PendingAlertReview
+  async changeStatusToPendingAlertReview(id: string): Promise<Invoice | null> {
     const invoice = await this.getById(id);
     if (!invoice) {
       return null;
@@ -500,7 +500,7 @@ export class InvoiceService {
     // Update the invoice status
     const updatedInvoice: Invoice = {
       ...invoice,
-      status: 'PendingWarrantyReview',
+      status: 'PendingAlertReview',
       updatedAt: nowIso()
     };
 

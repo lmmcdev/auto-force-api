@@ -783,7 +783,7 @@ export class LineItemService {
       throw new Error(`Invoice with id '${invoiceId}' not found`);
     }
 
-    const allowedStatuses = ['Draft', 'PendingWarrantyReview'];
+    const allowedStatuses = ['Draft', 'PendingAlertReview'];
     if (!allowedStatuses.includes(invoice.resource.status)) {
       throw new Error(`Cannot modify line items for invoice with status '${invoice.resource.status}'. Allowed statuses: ${allowedStatuses.join(', ')}`);
     }
