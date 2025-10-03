@@ -203,6 +203,20 @@ export class InvoiceService {
     const current = await this.getById(id);
     if (!current) throw new Error('invoice not found');
 
+    // Validate that invoice with 'PendingAlertReview' status cannot change to other statuses if pending alerts exist
+    if (payload.status &&
+        current.status === 'PendingAlertReview' &&
+        payload.status !== 'PendingAlertReview') {
+
+      // Import AlertService dynamically to avoid circular dependency
+      const { alertService } = await import('../../alert/services/alert.service');
+      const alerts = await alertService.getAlertsByInvoiceIdAndStatus(id, 'Pending');
+
+      if (alerts.length > 0) {
+        throw new Error(`Cannot change invoice status from 'PendingAlertReview' to '${payload.status}' because there are ${alerts.length} pending alert(s) for this invoice`);
+      }
+    }
+
     // Validate vehicle exists if changing vehicleId
     if (payload.vehicleId && payload.vehicleId !== current.vehicleId) {
       const vehicle = await this.vehiclesContainer.item(payload.vehicleId, payload.vehicleId).read();
@@ -455,6 +469,60 @@ export class InvoiceService {
     // Save the updated invoice
     await this.container.item(id, id).replace(updatedInvoice);
 
+    return updatedInvoice;
+  }
+
+  // Get order start date by invoice ID
+  async getOrderStartDate(id: string): Promise<string | null> {
+    const invoice = await this.getById(id);
+    if (!invoice) {
+      return null;
+    }
+    return invoice.orderStartDate;
+  }
+
+  // Get invoice status by ID
+  async getStatusById(id: string): Promise<string | null> {
+    const invoice = await this.getById(id);
+    if (!invoice) {
+      return null;
+    }
+    return invoice.status;
+  }
+
+  // Change invoice status to PendingAlertReview
+  async changeStatusToPendingAlertReview(id: string): Promise<Invoice | null> {
+    const invoice = await this.getById(id);
+    if (!invoice) {
+      return null;
+    }
+
+    // Update the invoice status
+    const updatedInvoice: Invoice = {
+      ...invoice,
+      status: 'PendingAlertReview',
+      updatedAt: nowIso()
+    };
+
+    await this.container.item(id, id).replace(updatedInvoice);
+    return updatedInvoice;
+  }
+
+  // Change invoice status to Draft
+  async changeStatusToDraft(id: string): Promise<Invoice | null> {
+    const invoice = await this.getById(id);
+    if (!invoice) {
+      return null;
+    }
+
+    // Update the invoice status
+    const updatedInvoice: Invoice = {
+      ...invoice,
+      status: 'Draft',
+      updatedAt: nowIso()
+    };
+
+    await this.container.item(id, id).replace(updatedInvoice);
     return updatedInvoice;
   }
 

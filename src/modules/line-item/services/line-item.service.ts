@@ -5,6 +5,7 @@ import { CreateLineItemDto } from '../dto/create-line-item.dto';
 import { UpdateLineItemDto } from '../dto/update-line-item.dto';
 import { QueryLineItemDto } from '../dto/query-line-item.dto';
 import { invoiceService } from '../../invoice/services/invoice.service';
+import { alertService } from '../../alert/services/alert.service';
 
 function nowIso() { return new Date().toISOString(); }
 
@@ -70,6 +71,9 @@ export class LineItemService {
       throw new Error(`Invoice with id '${payload.invoiceId}' not found`);
     }
 
+    // Validate invoice status
+    await this.validateInvoiceStatus(payload.invoiceId);
+
     // Calculate total price
     const unitPrice = Number(payload.unitPrice.toFixed(2));
     const quantity = Number(payload.quantity.toFixed(2));
@@ -103,6 +107,30 @@ export class LineItemService {
       await invoiceService.updateInvoiceAmount(payload.invoiceId);
     } catch (error) {
       console.error(`Failed to update invoice amount for invoice ${payload.invoiceId}:`, error);
+      // Don't throw error - line item was created successfully
+    }
+
+    // Check warranty date and create alert if needed
+    try {
+      await this.checkWarrantyDate(doc.vehicleId, doc.id, doc.serviceTypeId, doc.invoiceId);
+    } catch (error) {
+      console.error(`Failed to check warranty date for line item ${doc.id}:`, error);
+      // Don't throw error - line item was created successfully
+    }
+
+    // Check warranty mileage and create alert if needed
+    try {
+      await this.checkWarrantyMileage(doc.vehicleId, doc.id, doc.serviceTypeId, doc.mileage, doc.invoiceId);
+    } catch (error) {
+      console.error(`Failed to check warranty mileage for line item ${doc.id}:`, error);
+      // Don't throw error - line item was created successfully
+    }
+
+    // Check for lower prices and create alert if needed
+    try {
+      await this.checkLowerPrice(doc.serviceTypeId, doc.type, doc.unitPrice, doc.id);
+    } catch (error) {
+      console.error(`Failed to check lower price for line item ${doc.id}:`, error);
       // Don't throw error - line item was created successfully
     }
 
@@ -233,6 +261,12 @@ export class LineItemService {
     const current = await this.getById(id);
     if (!current) throw new Error('line item not found');
 
+    // Validate current invoice status
+    await this.validateInvoiceStatus(current.invoiceId);
+
+    // Delete all alerts associated with this line item before updating
+    await this.deleteAlertsForLineItem(id);
+
     // Validate service-type exists if changing serviceTypeId
     if (payload.serviceTypeId && payload.serviceTypeId !== current.serviceTypeId) {
       try {
@@ -257,6 +291,9 @@ export class LineItemService {
       } catch (error) {
         throw new Error(`Invoice with id '${payload.invoiceId}' not found`);
       }
+
+      // Validate new invoice status
+      await this.validateInvoiceStatus(payload.invoiceId);
     }
 
     // Calculate new total price if unit price or quantity changed
@@ -303,12 +340,42 @@ export class LineItemService {
       }
     }
 
+    // Check warranty date and create alert if needed
+    try {
+      await this.checkWarrantyDate(next.vehicleId, next.id, next.serviceTypeId, next.invoiceId);
+    } catch (error) {
+      console.error(`Failed to check warranty date for line item ${next.id} after update:`, error);
+      // Don't throw error - line item was updated successfully
+    }
+
+    // Check warranty mileage and create alert if needed
+    try {
+      await this.checkWarrantyMileage(next.vehicleId, next.id, next.serviceTypeId, next.mileage, next.invoiceId);
+    } catch (error) {
+      console.error(`Failed to check warranty mileage for line item ${next.id} after update:`, error);
+      // Don't throw error - line item was updated successfully
+    }
+
+    // Check for lower prices and create alert if needed
+    try {
+      await this.checkLowerPrice(next.serviceTypeId, next.type, next.unitPrice, next.id);
+    } catch (error) {
+      console.error(`Failed to check lower price for line item ${next.id} after update:`, error);
+      // Don't throw error - line item was updated successfully
+    }
+
     return next;
   }
 
   async delete(id: string): Promise<void> {
     const found = await this.getById(id);
     if (!found) throw new Error('line item not found');
+
+    // Validate invoice status
+    await this.validateInvoiceStatus(found.invoiceId);
+
+    // Delete all alerts associated with this line item before deleting
+    await this.deleteAlertsForLineItem(id);
 
     const invoiceId = found.invoiceId;
     await this.container.item(id, id).delete();
@@ -372,6 +439,78 @@ export class LineItemService {
     return resources;
   }
 
+  // Find by serviceTypeId, type, and unitPrice with descending unitPrice order
+  async findByServiceTypeIdAndTypeAndUnitPrice(serviceTypeId: string, type: LineItemType, unitPrice: number): Promise<LineItem[]> {
+    const q: SqlQuerySpec = {
+      query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.unitPrice = @unitPrice ORDER BY c.unitPrice DESC',
+      parameters: [
+        { name: '@serviceTypeId', value: serviceTypeId },
+        { name: '@type', value: type },
+        { name: '@unitPrice', value: unitPrice }
+      ]
+    };
+    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    return resources;
+  }
+
+  // Find line items with lower prices for same serviceTypeId and type
+  async findLowerPricesByServiceTypeAndType(serviceTypeId: string, type: LineItemType, unitPrice: number): Promise<LineItem[]> {
+    const q: SqlQuerySpec = {
+      query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.unitPrice < @unitPrice ORDER BY c.unitPrice ASC',
+      parameters: [
+        { name: '@serviceTypeId', value: serviceTypeId },
+        { name: '@type', value: type },
+        { name: '@unitPrice', value: unitPrice }
+      ]
+    };
+    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    return resources;
+  }
+
+  // Check for lower prices and create alert if found
+  async checkLowerPrice(serviceTypeId: string, type: LineItemType, unitPrice: number, lineItemId: string): Promise<void> {
+    try {
+      // Find line items with lower prices for same serviceTypeId and type
+      const lowerPriceItems = await this.findLowerPricesByServiceTypeAndType(serviceTypeId, type, unitPrice);
+
+      // Exclude the current line item
+      const filteredItems = lowerPriceItems.filter(item => item.id !== lineItemId);
+
+      // If lower price items exist, create an alert
+      if (filteredItems.length > 0) {
+        // Get the current line item to extract vehicleId and invoiceId
+        const currentLineItem = await this.getById(lineItemId);
+        if (!currentLineItem) {
+          console.error(`Line item with id ${lineItemId} not found`);
+          return;
+        }
+
+        // Get the first (lowest price) item as validLineItem
+        const validLineItem = filteredItems[0];
+
+        // Create alert
+        const alertData = {
+          type: "HIGHER_PRICE",
+          category: "ServiceType",
+          vehicleId: currentLineItem.vehicleId,
+          lineItemId: lineItemId,
+          validLineItem: validLineItem.id,
+          invoiceId: currentLineItem.invoiceId,
+          serviceTypeId: serviceTypeId,
+          reasons: "LOWER_PRICE_FOUND",
+          status: "Pending",
+          message: "A previous line item for this service type was charged at a lower unit price. Please review for potential overpricing."
+        };
+
+        await alertService.create(alertData);
+        console.log(`Alert created for line item ${lineItemId} - lower price found: ${validLineItem.unitPrice} vs ${unitPrice}`);
+      }
+    } catch (error) {
+      console.error(`Failed to check lower price for line item ${lineItemId}:`, error);
+      // Don't throw error to avoid breaking the main operation
+    }
+  }
+
   // Bulk import
   async bulkImport(lineItems: LineItem[]): Promise<{ success: LineItem[]; errors: { item: any; error: string }[] }> {
     const success: LineItem[] = [];
@@ -422,6 +561,14 @@ export class LineItemService {
           continue;
         }
 
+        // Validate invoice status
+        try {
+          await this.validateInvoiceStatus(item.invoiceId);
+        } catch (error: any) {
+          errors.push({ item, error: error.message || 'Invalid invoice status' });
+          continue;
+        }
+
         // Calculate total price
         const unitPrice = Number(item.unitPrice.toFixed(2));
         const quantity = Number(item.quantity.toFixed(2));
@@ -448,6 +595,30 @@ export class LineItemService {
         const cleanDoc = cleanUndefined(doc);
         await this.container.items.create(cleanDoc);
         success.push(cleanDoc);
+
+        // Check warranty date and create alert if needed
+        try {
+          await this.checkWarrantyDate(cleanDoc.vehicleId, cleanDoc.id, cleanDoc.serviceTypeId, cleanDoc.invoiceId);
+        } catch (error) {
+          console.error(`Failed to check warranty date for line item ${cleanDoc.id} during bulk import:`, error);
+          // Don't add to errors - line item was imported successfully
+        }
+
+        // Check warranty mileage and create alert if needed
+        try {
+          await this.checkWarrantyMileage(cleanDoc.vehicleId, cleanDoc.id, cleanDoc.serviceTypeId, cleanDoc.mileage, cleanDoc.invoiceId);
+        } catch (error) {
+          console.error(`Failed to check warranty mileage for line item ${cleanDoc.id} during bulk import:`, error);
+          // Don't add to errors - line item was imported successfully
+        }
+
+        // Check for lower prices and create alert if needed
+        try {
+          await this.checkLowerPrice(cleanDoc.serviceTypeId, cleanDoc.type, cleanDoc.unitPrice, cleanDoc.id);
+        } catch (error) {
+          console.error(`Failed to check lower price for line item ${cleanDoc.id} during bulk import:`, error);
+          // Don't add to errors - line item was imported successfully
+        }
       } catch (error: any) {
         errors.push({
           item,
@@ -473,6 +644,149 @@ export class LineItemService {
     }
 
     return { success, errors };
+  }
+
+  // Check warranty date and create alert if overlapping warranty exists
+  async checkWarrantyDate(vehicleId: string, lineItemId: string, serviceTypeId: string, invoiceId: string): Promise<void> {
+    try {
+      // Get order start date from invoice
+      const orderStartDate = await invoiceService.getOrderStartDate(invoiceId);
+      if (!orderStartDate) {
+        console.warn(`Cannot get order start date for invoice ${invoiceId}`);
+        return;
+      }
+
+      // Search for line items with overlapping warranty
+      const warrantyQuery: SqlQuerySpec = {
+        query: `SELECT * FROM c WHERE c.id != @lineItemId
+                AND c.vehicleId = @vehicleId
+                AND c.serviceTypeId = @serviceTypeId
+                AND c.warrantyDate >= @orderStartDate
+                AND c.warranty = true
+                ORDER BY c.warrantyDate DESC`,
+        parameters: [
+          { name: '@lineItemId', value: lineItemId },
+          { name: '@vehicleId', value: vehicleId },
+          { name: '@serviceTypeId', value: serviceTypeId },
+          { name: '@orderStartDate', value: orderStartDate }
+        ]
+      };
+
+      const { resources: overlappingWarranties } = await this.container.items.query(warrantyQuery).fetchAll();
+
+      // If overlapping warranties exist, create an alert
+      if (overlappingWarranties.length > 0) {
+        // Get the last (most recent) line item from results
+        const lastLineItem = overlappingWarranties[0]; // Already ordered DESC
+
+        // Create alert
+        await alertService.create({
+          type: 'WARRANTY',
+          category: 'ServiceType',
+          vehicleId: vehicleId,
+          lineItemId: lineItemId,
+          validLineItem: lastLineItem.id,
+          invoiceId: invoiceId,
+          serviceTypeId: serviceTypeId,
+          reasons: 'DATE_VALID',
+          status: 'Pending',
+          message: 'Existing service type has a valid warranty that overlaps with invoice start date.'
+        });
+
+        console.log(`Created warranty overlap alert for line item ${lineItemId}`);
+      }
+    } catch (error) {
+      console.error(`Failed to check warranty date for line item ${lineItemId}:`, error);
+      // Don't throw error - line item creation should not fail due to alert creation issues
+    }
+  }
+
+  // Check warranty mileage and create alert if overlapping warranty exists
+  async checkWarrantyMileage(vehicleId: string, lineItemId: string, serviceTypeId: string, mileage: number, invoiceId: string): Promise<void> {
+    try {
+      // Search for line items with overlapping warranty mileage
+      const warrantyMileageQuery: SqlQuerySpec = {
+        query: `SELECT * FROM c WHERE c.id != @lineItemId
+                AND c.vehicleId = @vehicleId
+                AND c.serviceTypeId = @serviceTypeId
+                AND (c.mileage + c.warrantyMileage) >= @mileage
+                AND c.warrantyMileage > 0
+                AND c.warranty = true
+                ORDER BY c.mileage DESC`,
+        parameters: [
+          { name: '@lineItemId', value: lineItemId },
+          { name: '@vehicleId', value: vehicleId },
+          { name: '@serviceTypeId', value: serviceTypeId },
+          { name: '@mileage', value: mileage }
+        ]
+      };
+
+      const { resources: overlappingWarranties } = await this.container.items.query(warrantyMileageQuery).fetchAll();
+
+      // If overlapping warranties exist, create an alert
+      if (overlappingWarranties.length > 0) {
+        // Get the last (most recent) line item from results
+        const lastLineItem = overlappingWarranties[0]; // Already ordered DESC by mileage
+
+        // Create alert
+        await alertService.create({
+          type: 'WARRANTY',
+          category: 'ServiceType',
+          vehicleId: vehicleId,
+          lineItemId: lineItemId,
+          validLineItem: lastLineItem.id,
+          invoiceId: invoiceId,
+          serviceTypeId: serviceTypeId,
+          reasons: 'MILEAGE_VALID',
+          status: 'Pending',
+          message: 'Existing service type has a valid warranty that overlaps with current mileage.'
+        });
+
+        console.log(`Created warranty mileage overlap alert for line item ${lineItemId}`);
+      }
+    } catch (error) {
+      console.error(`Failed to check warranty mileage for line item ${lineItemId}:`, error);
+      // Don't throw error - line item creation should not fail due to alert creation issues
+    }
+  }
+
+  // Helper method to delete all alerts associated with a line item
+  private async deleteAlertsForLineItem(lineItemId: string): Promise<void> {
+    try {
+      // Find all alerts with the given lineItemId
+      const alerts = await alertService.findByLineItemId(lineItemId);
+
+      // Delete each alert
+      for (const alert of alerts) {
+        try {
+          await alertService.delete(alert.id);
+          console.log(`Deleted alert ${alert.id} for line item ${lineItemId}`);
+        } catch (error) {
+          console.error(`Failed to delete alert ${alert.id} for line item ${lineItemId}:`, error);
+          // Continue deleting other alerts even if one fails
+        }
+      }
+
+      if (alerts.length > 0) {
+        console.log(`Deleted ${alerts.length} alerts for line item ${lineItemId}`);
+      }
+    } catch (error) {
+      console.error(`Failed to delete alerts for line item ${lineItemId}:`, error);
+      // Don't throw error - line item operation should not fail due to alert deletion issues
+    }
+  }
+
+  // Helper method to validate invoice status for line item operations
+  private async validateInvoiceStatus(invoiceId: string): Promise<void> {
+    const invoice = await this.invoicesContainer.item(invoiceId, invoiceId).read();
+    if (!invoice.resource) {
+      throw new Error(`Invoice with id '${invoiceId}' not found`);
+    }
+
+    const allowedStatuses = ['Draft', 'PendingAlertReview'];
+    if (!allowedStatuses.includes(invoice.resource.status)) {
+      throw new Error(`Cannot modify line items for invoice with status '${invoice.resource.status}'. Allowed statuses: ${allowedStatuses.join(', ')}`);
+    }
   }
 
   private generateId(): string {
