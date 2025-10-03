@@ -4,6 +4,7 @@ import { Alert, AlertType, AlertCategory, AlertReasons, AlertStatus } from '../e
 import { CreateAlertDto } from '../dto/create-alert.dto';
 import { UpdateAlertDto } from '../dto/update-alert.dto';
 import { QueryAlertDto } from '../dto/query-alert.dto';
+import { invoiceService } from '../../invoice/services/invoice.service';
 
 function nowIso() { return new Date().toISOString(); }
 
@@ -54,6 +55,21 @@ export class AlertService {
 
     const cleanDoc = cleanUndefined(doc);
     await this.container.items.create(cleanDoc);
+
+    // Check if alert has invoiceId and change invoice status if needed
+    if (cleanDoc.invoiceId) {
+      try {
+        const currentStatus = await invoiceService.getStatusById(cleanDoc.invoiceId);
+        if (currentStatus === 'Draft') {
+          await invoiceService.changeStatusToPendingWarrantyReview(cleanDoc.invoiceId);
+          console.log(`Changed invoice ${cleanDoc.invoiceId} status from Draft to PendingWarrantyReview due to alert creation`);
+        }
+      } catch (error) {
+        console.error(`Failed to change invoice status for invoice ${cleanDoc.invoiceId}:`, error);
+        // Don't throw error - alert was created successfully
+      }
+    }
+
     return cleanDoc;
   }
 
@@ -186,13 +202,41 @@ export class AlertService {
     };
 
     await this.container.item(id, id).replace(next);
+
+    // Handle status changes and invoice status updates
+    if (payload.status && payload.status !== current.status && next.invoiceId) {
+      const statusChangedFromPending = current.status === 'Pending' &&
+                                      ['Acknowledged', 'Overridden', 'Resolved'].includes(payload.status);
+
+      const statusChangedToPending = payload.status === 'Pending' && current.status !== 'Pending';
+
+      if (statusChangedFromPending) {
+        // Check if invoice should be changed back to Draft
+        await this.checkAndChangeInvoiceStatusToDraft(next.invoiceId);
+      } else if (statusChangedToPending) {
+        // Change invoice status to PendingWarrantyReview
+        try {
+          await invoiceService.changeStatusToPendingWarrantyReview(next.invoiceId);
+          console.log(`Changed invoice ${next.invoiceId} status to PendingWarrantyReview due to alert status change to Pending`);
+        } catch (error) {
+          console.error(`Failed to change invoice status for invoice ${next.invoiceId}:`, error);
+          // Don't throw error - alert was updated successfully
+        }
+      }
+    }
+
     return next;
   }
 
   async delete(id: string): Promise<void> {
     const found = await this.getById(id);
     if (!found) throw new Error('alert not found');
+
+    const invoiceId = found.invoiceId; // Store invoiceId before deletion
     await this.container.item(id, id).delete();
+
+    // Check if invoice should be changed back to Draft
+    await this.checkAndChangeInvoiceStatusToDraft(invoiceId);
   }
 
   // Find by type
@@ -274,6 +318,19 @@ export class AlertService {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.invoiceId = @invoiceId ORDER BY c.createdAt DESC',
       parameters: [{ name: '@invoiceId', value: invoiceId }]
+    };
+    const { resources } = await this.container.items.query<Alert>(q).fetchAll();
+    return resources;
+  }
+
+  // Find by invoice ID and status
+  async getAlertsByInvoiceIdAndStatus(invoiceId: string, status: AlertStatus): Promise<Alert[]> {
+    const q: SqlQuerySpec = {
+      query: 'SELECT * FROM c WHERE c.invoiceId = @invoiceId AND c.status = @status ORDER BY c.createdAt DESC',
+      parameters: [
+        { name: '@invoiceId', value: invoiceId },
+        { name: '@status', value: status }
+      ]
     };
     const { resources } = await this.container.items.query<Alert>(q).fetchAll();
     return resources;
@@ -365,6 +422,28 @@ export class AlertService {
     }
 
     return { success, errors };
+  }
+
+  // Helper method to check if invoice should be changed back to Draft
+  private async checkAndChangeInvoiceStatusToDraft(invoiceId: string | undefined): Promise<void> {
+    if (!invoiceId) return;
+
+    try {
+      // Get all alerts for this invoice
+      const alerts = await this.findByInvoiceId(invoiceId);
+
+      // Check if there are any pending alerts
+      const pendingAlerts = alerts.filter(alert => alert.status === 'Pending');
+
+      // If no pending alerts remain, change invoice status back to Draft
+      if (pendingAlerts.length === 0) {
+        await invoiceService.changeStatusToDraft(invoiceId);
+        console.log(`Changed invoice ${invoiceId} status back to Draft - no pending alerts remaining`);
+      }
+    } catch (error) {
+      console.error(`Failed to check/change invoice status for invoice ${invoiceId}:`, error);
+      // Don't throw error - alert operation should not fail due to status change issues
+    }
   }
 
   private generateId(): string {
