@@ -4,8 +4,8 @@ import {
   HttpResponseInit,
   InvocationContext,
 } from "@azure/functions";
-import { HealthService } from "../services/health.service";
 import { HealthResponseDto } from "../dto/health-response.dto";
+import { HealthService } from "../services/health.service";
 const healthRoute = "v1/health";
 export class HealthController {
   private readonly healthService: HealthService;
@@ -77,6 +77,7 @@ export async function health(
       jsonBody: healthStatus,
     };
   } catch (error) {
+    console.error("Health check failed:", error);
     return {
       status: 500,
       jsonBody: { error: "Health check failed" },

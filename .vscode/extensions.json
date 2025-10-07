@@ -1,5 +1,15 @@
 {
-    "recommendations": [
-        "ms-azuretools.vscode-azurefunctions"
-    ]
+  "recommendations": [
+    "ms-azuretools.vscode-azurefunctions",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "ms-vscode.vscode-typescript-next",
+    "ms-vscode.azure-account",
+    "christian-kohler.path-intellisense",
+    "ms-vscode.vscode-json"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-typescript",
+    "hookyqr.beautify"
+  ]
 }

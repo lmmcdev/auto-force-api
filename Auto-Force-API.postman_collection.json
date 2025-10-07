@@ -1,0 +1,253 @@
+{
+  "info": {
+    "name": "Auto Force API",
+    "description": "API para Auto Force con autenticación Azure AD",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "oauth2",
+    "oauth2": [
+      {
+        "key": "tokenName",
+        "value": "Auto Force Token",
+        "type": "string"
+      },
+      {
+        "key": "grant_type",
+        "value": "authorization_code",
+        "type": "string"
+      },
+      {
+        "key": "authUrl",
+        "value": "https://login.microsoftonline.com/7313ad10-b885-4b50-9c75-9dbbd975618f/oauth2/v2.0/authorize",
+        "type": "string"
+      },
+      {
+        "key": "accessTokenUrl",
+        "value": "https://login.microsoftonline.com/7313ad10-b885-4b50-9c75-9dbbd975618f/oauth2/v2.0/token",
+        "type": "string"
+      },
+      {
+        "key": "clientId",
+        "value": "77c80afa-38e9-4284-8033-b599f1667afe",
+        "type": "string"
+      },
+      {
+        "key": "scope",
+        "value": "api://77c80afa-38e9-4284-8033-b599f1667afe/.default",
+        "type": "string"
+      },
+      {
+        "key": "addTokenTo",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Vendors",
+      "item": [
+        {
+          "name": "Get All Vendors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vendors",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vendors"]
+            },
+            "description": "Obtiene todos los vendors (requiere autenticación)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Vendor by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vendors/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vendors", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "ID del vendor"
+                }
+              ]
+            },
+            "description": "Obtiene un vendor por ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Vendor\",\n  \"code\": \"VEN001\",\n  \"type\": \"Supplier\",\n  \"status\": \"Active\",\n  \"contactInfo\": {\n    \"email\": \"vendor@example.com\",\n    \"phone\": \"+1234567890\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/vendors",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vendors"]
+            },
+            "description": "Crea un nuevo vendor"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Vendor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Vendor Name\",\n  \"status\": \"Inactive\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/vendors/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vendors", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "ID del vendor"
+                }
+              ]
+            },
+            "description": "Actualiza un vendor existente"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Vendor",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vendors/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vendors", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "ID del vendor"
+                }
+              ]
+            },
+            "description": "Elimina un vendor"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Vendors by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vendors/by-status/:status",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vendors", "by-status", ":status"],
+              "variable": [
+                {
+                  "key": "status",
+                  "value": "Active",
+                  "description": "Active o Inactive"
+                }
+              ]
+            },
+            "description": "Obtiene vendors por status"
+          },
+          "response": []
+        },
+        {
+          "name": "Import Vendors",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"name\": \"Vendor 1\",\n    \"code\": \"V001\",\n    \"type\": \"Supplier\",\n    \"status\": \"Active\"\n  },\n  {\n    \"name\": \"Vendor 2\",\n    \"code\": \"V002\",\n    \"type\": \"Manufacturer\",\n    \"status\": \"Active\"\n  }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/vendors/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vendors", "import"]
+            },
+            "description": "Importa múltiples vendors"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "health"]
+            },
+            "description": "Health check endpoint (sin autenticación)"
+          },
+          "response": []
+        },
+        {
+          "name": "Health Status",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/health/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "health", "status"]
+            },
+            "description": "Health status detallado (sin autenticación)"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:7071/api",
+      "type": "string"
+    }
+  ]
+}

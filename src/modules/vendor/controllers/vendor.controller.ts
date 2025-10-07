@@ -9,10 +9,11 @@ import { CreateVendorDTO } from "../dto/create-vendor.dto";
 import { UpdateVendorDTO } from "../dto/update-vendor.dto";
 import { vendorService, VendorService } from "../services/vendor.service";
 import { QueryVendorDTO } from "../dto/query-vendor.dto";
+import { authService } from "../../auth";
 
 const vendorsRoute = "v1/vendors"
 export class VendorController{
-   
+
    // POST /vendors
   async postOne(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
@@ -80,6 +81,10 @@ export class VendorController{
   // GET /vendors?q=&status=&type=&skip=&take=
   async getMany(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
+      // Autenticar usuario
+      const user = authService.getAuthenticatedUser(request);
+      context.log('Authenticated user:', user.name, user.email);
+
       const url = new URL(request.url);
 
       const query: QueryVendorDTO = {
@@ -169,6 +174,15 @@ export class VendorController{
   // Mapeo de errores a HTTP
   private toError(err: any): HttpResponseInit {
     const msg = String(err?.message ?? "Internal error");
+
+    // Check for authentication/authorization errors by name or status code
+    if (err?.name === 'AuthenticationError' || err?.statusCode === 401) {
+      return { status: 401, jsonBody: { message: msg } };
+    }
+    if (err?.name === 'AuthorizationError' || err?.statusCode === 403) {
+      return { status: 403, jsonBody: { message: msg } };
+    }
+
     const status =
       /not found/i.test(msg) ? 404 :
       /already exists/i.test(msg) ? 409 :
@@ -176,12 +190,12 @@ export class VendorController{
       500;
 
     return { status, jsonBody: { message: msg } };
-  }  
-    
+  }
+
 }
 
 export const vendorController = new VendorController();
-  
+
 app.http("PostVendor", {
   methods: ["POST"],
   route: vendorsRoute,
