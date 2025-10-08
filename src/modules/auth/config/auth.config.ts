@@ -1,4 +1,4 @@
-import 'dotenv/config'
+import 'dotenv/config';
 
 /**
  * Authentication Configuration
@@ -23,27 +23,30 @@ export interface AuthConfig {
  * Gets authentication configuration from environment variables
  */
 export function getAuthConfig(): AuthConfig {
-  const clientId = process.env.CLIENT_ID;
-  const tenantId = process.env.TENANT_ID;
-  const appIdUri = process.env.APP_ID_URI;
-  const allowedRolesEnv = process.env.ALLOWED_ROLES;
+  const clientId = process.env.AZURE_AD_CLIENT_ID;
+  const tenantId = process.env.AZURE_AD_TENANT_ID;
+  const appIdUri = process.env.AZURE_AD_APP_ID_URI;
+  const allowedRolesEnv = process.env.AZURE_AD_ALLOWED_ROLES;
 
   // Validate required environment variables
   if (!clientId) {
-    throw new Error('CLIENT_ID environment variable is required');
+    throw new Error('AZURE_AD_CLIENT_ID environment variable is required');
   }
 
   if (!tenantId) {
-    throw new Error('TENANT_ID environment variable is required');
+    throw new Error('AZURE_AD_TENANT_ID environment variable is required');
   }
 
   if (!appIdUri) {
-    throw new Error('APP_ID_URI environment variable is required');
+    throw new Error('AZURE_AD_APP_ID_URI environment variable is required');
   }
 
   // Parse allowed roles (comma-separated)
   const allowedRoles = allowedRolesEnv
-    ? allowedRolesEnv.split(',').map(role => role.trim()).filter(role => role.length > 0)
+    ? allowedRolesEnv
+        .split(',')
+        .map(role => role.trim())
+        .filter(role => role.length > 0)
     : [];
 
   return {
@@ -52,7 +55,7 @@ export function getAuthConfig(): AuthConfig {
     appIdUri,
     allowedRoles,
     issuer: `https://login.microsoftonline.com/${tenantId}/v2.0`,
-    jwksUri: `https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`
+    jwksUri: `https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`,
   };
 }
 
@@ -66,7 +69,7 @@ export const DefaultRoles = {
   MANAGER: 'Manager',
   USER: 'User',
   READONLY: 'ReadOnly',
-  SUPER_ADMIN: 'SuperAdmin'
+  SUPER_ADMIN: 'SuperAdmin',
 } as const;
 
 /**
@@ -137,7 +140,7 @@ export const AzureAdClaimTypes = {
   FamilyName: 'family_name',
 
   // Authentication method
-  AuthenticationMethod: 'http://schemas.microsoft.com/claims/authnmethodsreferences'
+  AuthenticationMethod: 'http://schemas.microsoft.com/claims/authnmethodsreferences',
 } as const;
 
 /**
@@ -191,6 +194,6 @@ export function getSafeAuthConfig(config?: AuthConfig): Partial<AuthConfig> {
     allowedRoles: authConfig.allowedRoles,
     issuer: authConfig.issuer,
     // Exclude clientId for security
-    clientId: `${authConfig.clientId.substring(0, 8)}...`
+    clientId: `${authConfig.clientId.substring(0, 8)}...`,
   };
 }

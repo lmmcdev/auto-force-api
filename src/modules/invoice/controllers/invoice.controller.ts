@@ -77,7 +77,7 @@ export class InvoiceController {
     }
   }
 
-  // GET /invoices?q=&vehicleId=&vendorId=&status=&skip=&take=
+  // GET /invoices?q=&vehicleId=&vendorId=&status=&pageSize=&continuationToken=
   async getMany(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
       const url = new URL(request.url);
@@ -94,12 +94,16 @@ export class InvoiceController {
         uploadDateTo: url.searchParams.get("uploadDateTo") ?? undefined,
         minAmount: url.searchParams.get("minAmount") ? Number(url.searchParams.get("minAmount")) : undefined,
         maxAmount: url.searchParams.get("maxAmount") ? Number(url.searchParams.get("maxAmount")) : undefined,
+        // Support legacy pagination (deprecated)
         skip: url.searchParams.get("skip") ? Number(url.searchParams.get("skip")) : undefined,
         take: url.searchParams.get("take") ? Number(url.searchParams.get("take")) : undefined,
+        // Native Cosmos DB pagination
+        pageSize: url.searchParams.get("pageSize") ? Number(url.searchParams.get("pageSize")) : undefined,
+        continuationToken: url.searchParams.get("continuationToken") ?? undefined,
       };
 
-      const { data, total } = await invoiceService.find(query);
-      return { status: 200, jsonBody: { data, total } };
+      const result = await invoiceService.find(query);
+      return { status: 200, jsonBody: result };
     } catch (err: any) {
       context.error("invoice.getMany error", err);
       return this.toError(err);
@@ -195,6 +199,33 @@ export class InvoiceController {
     }
   }
 
+  // GET /invoices/count?q=&vehicleId=&vendorId=&status=...
+  async getCount(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const url = new URL(request.url);
+
+      const query: QueryInvoiceDto = {
+        q: url.searchParams.get("q") ?? undefined,
+        vehicleId: url.searchParams.get("vehicleId") ?? undefined,
+        vendorId: url.searchParams.get("vendorId") ?? undefined,
+        status: (url.searchParams.get("status") as InvoiceStatus) ?? undefined,
+        invoiceNumber: url.searchParams.get("invoiceNumber") ?? undefined,
+        orderStartDateFrom: url.searchParams.get("orderStartDateFrom") ?? undefined,
+        orderStartDateTo: url.searchParams.get("orderStartDateTo") ?? undefined,
+        uploadDateFrom: url.searchParams.get("uploadDateFrom") ?? undefined,
+        uploadDateTo: url.searchParams.get("uploadDateTo") ?? undefined,
+        minAmount: url.searchParams.get("minAmount") ? Number(url.searchParams.get("minAmount")) : undefined,
+        maxAmount: url.searchParams.get("maxAmount") ? Number(url.searchParams.get("maxAmount")) : undefined,
+      };
+
+      const count = await invoiceService.count(query);
+      return { status: 200, jsonBody: { count } };
+    } catch (err: any) {
+      context.error("invoice.getCount error", err);
+      return this.toError(err);
+    }
+  }
+
   // Mapeo de errores a HTTP
   private toError(err: any): HttpResponseInit {
     const msg = String(err?.message ?? "Internal error");
@@ -223,6 +254,13 @@ app.http("ImportInvoices", {
   route: `${invoicesRoute}/import`,
   authLevel: "function",
   handler: (req, ctx) => invoiceController.importList(req, ctx),
+});
+
+app.http("GetInvoicesCount", {
+  methods: ["GET"],
+  route: "v1/count/invoices",
+  authLevel: "function",
+  handler: (req, ctx) => invoiceController.getCount(req, ctx),
 });
 
 app.http("GetInvoice", {

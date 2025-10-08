@@ -46,6 +46,1589 @@
   },
   "item": [
     {
+      "name": "Alerts",
+      "item": [
+        {
+          "name": "Get All Alerts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts?take=10&skip=0&q=&type=&category=&vehicleId=&lineItemId=&invoiceId=&serviceTypeId=&validLineItem=&reasons=&status=&createdFrom=&createdTo=&hasResolution=",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts"],
+              "query": [
+                {
+                  "key": "take",
+                  "value": "10",
+                  "description": "Number of items to take (pagination)"
+                },
+                {
+                  "key": "skip",
+                  "value": "0",
+                  "description": "Number of items to skip (pagination)"
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search query"
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "description": "Alert type (WARRANTY, LICENSE, PERMIT, HIGHER_PRICE, CERTIFICATION)"
+                },
+                {
+                  "key": "category",
+                  "value": "",
+                  "description": "Alert category (ServiceType, DriverLicense)"
+                },
+                {
+                  "key": "vehicleId",
+                  "value": "",
+                  "description": "Filter by vehicle ID"
+                },
+                {
+                  "key": "lineItemId",
+                  "value": "",
+                  "description": "Filter by line item ID"
+                },
+                {
+                  "key": "invoiceId",
+                  "value": "",
+                  "description": "Filter by invoice ID"
+                },
+                {
+                  "key": "serviceTypeId",
+                  "value": "",
+                  "description": "Filter by service type ID"
+                },
+                {
+                  "key": "validLineItem",
+                  "value": "",
+                  "description": "Filter by valid line item ID"
+                },
+                {
+                  "key": "reasons",
+                  "value": "",
+                  "description": "Alert reasons (DATE_VALID, MILEAGE_VALID, Expiration Date)"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Alert status (Pending, Acknowledged, Overridden, Resolved)"
+                },
+                {
+                  "key": "createdFrom",
+                  "value": "",
+                  "description": "Created from date (ISO format)"
+                },
+                {
+                  "key": "createdTo",
+                  "value": "",
+                  "description": "Created to date (ISO format)"
+                },
+                {
+                  "key": "hasResolution",
+                  "value": "",
+                  "description": "Has resolution (true/false)"
+                }
+              ]
+            },
+            "description": "Obtiene todas las alertas con filtros opcionales"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Alert by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Alert ID"
+                }
+              ]
+            },
+            "description": "Obtiene una alerta por ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"WARRANTY\",\n  \"category\": \"ServiceType\",\n  \"vehicleId\": \"vehicle-id\",\n  \"lineItemId\": \"line-item-id\",\n  \"invoiceId\": \"invoice-id\",\n  \"serviceTypeId\": \"service-type-id\",\n  \"validLineItem\": \"valid-line-item-id\",\n  \"reasons\": \"DATE_VALID\",\n  \"status\": \"Pending\",\n  \"message\": \"Warranty alert message\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts"]
+            },
+            "description": "Crea una nueva alerta"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Alert",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Resolved\",\n  \"resolution\": {\n    \"action\": \"approve\",\n    \"byUserId\": \"user-id\",\n    \"byUserEmail\": \"user@example.com\",\n    \"at\": \"2025-01-15T10:30:00Z\",\n    \"note\": \"Approved after review\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Alert ID"
+                }
+              ]
+            },
+            "description": "Actualiza una alerta existente"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Alert",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Alert ID"
+                }
+              ]
+            },
+            "description": "Elimina una alerta"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Alerts by Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/by-type/:type",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", "by-type", ":type"],
+              "variable": [
+                {
+                  "key": "type",
+                  "value": "WARRANTY",
+                  "description": "Alert type (WARRANTY, LICENSE, PERMIT, HIGHER_PRICE, CERTIFICATION)"
+                }
+              ]
+            },
+            "description": "Obtiene alertas por tipo"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Alerts by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/by-category/:category",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", "by-category", ":category"],
+              "variable": [
+                {
+                  "key": "category",
+                  "value": "ServiceType",
+                  "description": "Alert category (ServiceType, DriverLicense)"
+                }
+              ]
+            },
+            "description": "Obtiene alertas por categoría"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Alerts by Vehicle",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/by-vehicle/:vehicleId",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", "by-vehicle", ":vehicleId"],
+              "variable": [
+                {
+                  "key": "vehicleId",
+                  "value": "",
+                  "description": "Vehicle ID"
+                }
+              ]
+            },
+            "description": "Obtiene alertas por vehículo"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Alerts by Service Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/by-service-type/:serviceTypeId",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", "by-service-type", ":serviceTypeId"],
+              "variable": [
+                {
+                  "key": "serviceTypeId",
+                  "value": "",
+                  "description": "Service Type ID"
+                }
+              ]
+            },
+            "description": "Obtiene alertas por tipo de servicio"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Alerts by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/by-status/:status",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", "by-status", ":status"],
+              "variable": [
+                {
+                  "key": "status",
+                  "value": "Pending",
+                  "description": "Alert status (Pending, Acknowledged, Overridden, Resolved)"
+                }
+              ]
+            },
+            "description": "Obtiene alertas por estado"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Alerts by Service Type, Vehicle and Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/by-service-type-and-vehicle-and-status/:serviceTypeId/:vehicleId/:status",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", "by-service-type-and-vehicle-and-status", ":serviceTypeId", ":vehicleId", ":status"],
+              "variable": [
+                {
+                  "key": "serviceTypeId",
+                  "value": "",
+                  "description": "Service Type ID"
+                },
+                {
+                  "key": "vehicleId",
+                  "value": "",
+                  "description": "Vehicle ID"
+                },
+                {
+                  "key": "status",
+                  "value": "Pending",
+                  "description": "Alert status"
+                }
+              ]
+            },
+            "description": "Obtiene alertas por tipo de servicio, vehículo y estado"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Alerts by Line Item",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/by-line-item/:lineItemId",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", "by-line-item", ":lineItemId"],
+              "variable": [
+                {
+                  "key": "lineItemId",
+                  "value": "",
+                  "description": "Line Item ID"
+                }
+              ]
+            },
+            "description": "Obtiene alertas por item de línea"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Alerts by Invoice",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/by-invoice/:invoiceId",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", "by-invoice", ":invoiceId"],
+              "variable": [
+                {
+                  "key": "invoiceId",
+                  "value": "",
+                  "description": "Invoice ID"
+                }
+              ]
+            },
+            "description": "Obtiene alertas por factura"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Alerts by Reasons",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/by-reasons/:reasons",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", "by-reasons", ":reasons"],
+              "variable": [
+                {
+                  "key": "reasons",
+                  "value": "DATE_VALID",
+                  "description": "Alert reasons (DATE_VALID, MILEAGE_VALID, Expiration Date)"
+                }
+              ]
+            },
+            "description": "Obtiene alertas por razones"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Alerts by Valid Line Item",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/by-valid-line-item/:validLineItem",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", "by-valid-line-item", ":validLineItem"],
+              "variable": [
+                {
+                  "key": "validLineItem",
+                  "value": "",
+                  "description": "Valid Line Item ID"
+                }
+              ]
+            },
+            "description": "Obtiene alertas por item de línea válido"
+          },
+          "response": []
+        },
+        {
+          "name": "Import Alerts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"type\": \"WARRANTY\",\n    \"category\": \"ServiceType\",\n    \"vehicleId\": \"vehicle-1\",\n    \"reasons\": \"DATE_VALID\",\n    \"message\": \"Warranty alert 1\"\n  },\n  {\n    \"type\": \"HIGHER_PRICE\",\n    \"category\": \"ServiceType\",\n    \"lineItemId\": \"line-item-1\",\n    \"reasons\": \"MILEAGE_VALID\",\n    \"message\": \"Higher price alert\"\n  }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/alerts/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "alerts", "import"]
+            },
+            "description": "Importa múltiples alertas"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "Get All Invoices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/invoices?q=&vehicleId=&vendorId=&status=&invoiceNumber=&orderStartDateFrom=&orderStartDateTo=&uploadDateFrom=&uploadDateTo=&minAmount=&maxAmount=&skip=0&take=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "invoices"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search query"
+                },
+                {
+                  "key": "vehicleId",
+                  "value": "",
+                  "description": "Filter by vehicle ID"
+                },
+                {
+                  "key": "vendorId",
+                  "value": "",
+                  "description": "Filter by vendor ID"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status (Draft, PendingAlertReview, Approved, Rejected, Paid, Cancelled)"
+                },
+                {
+                  "key": "invoiceNumber",
+                  "value": "",
+                  "description": "Filter by invoice number"
+                },
+                {
+                  "key": "orderStartDateFrom",
+                  "value": "",
+                  "description": "Order start date from (ISO format)"
+                },
+                {
+                  "key": "orderStartDateTo",
+                  "value": "",
+                  "description": "Order start date to (ISO format)"
+                },
+                {
+                  "key": "uploadDateFrom",
+                  "value": "",
+                  "description": "Upload date from (ISO format)"
+                },
+                {
+                  "key": "uploadDateTo",
+                  "value": "",
+                  "description": "Upload date to (ISO format)"
+                },
+                {
+                  "key": "minAmount",
+                  "value": "",
+                  "description": "Minimum invoice amount"
+                },
+                {
+                  "key": "maxAmount",
+                  "value": "",
+                  "description": "Maximum invoice amount"
+                },
+                {
+                  "key": "skip",
+                  "value": "0",
+                  "description": "Number of items to skip (pagination)"
+                },
+                {
+                  "key": "take",
+                  "value": "10",
+                  "description": "Number of items to take (pagination)"
+                }
+              ]
+            },
+            "description": "Obtiene todas las facturas con filtros opcionales"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Invoice by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/invoices/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "invoices", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Invoice ID"
+                }
+              ]
+            },
+            "description": "Obtiene una factura por ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"vehicle-id\",\n  \"vendorId\": \"vendor-id\",\n  \"invoiceNumber\": \"INV-001\",\n  \"orderStartDate\": \"2025-01-01T00:00:00Z\",\n  \"uploadDate\": \"2025-01-15T00:00:00Z\",\n  \"invoiceAmount\": 1500.50,\n  \"status\": \"Draft\",\n  \"tax\": 120.04,\n  \"description\": \"Vehicle maintenance invoice\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/invoices",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "invoices"]
+            },
+            "description": "Crea una nueva factura"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Invoice",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Approved\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/invoices/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "invoices", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Invoice ID"
+                }
+              ]
+            },
+            "description": "Actualiza una factura existente"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Invoice",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/invoices/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "invoices", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Invoice ID"
+                }
+              ]
+            },
+            "description": "Elimina una factura"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Invoice by Invoice Number",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/invoices/by-invoice-number/:invoiceNumber",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "invoices", "by-invoice-number", ":invoiceNumber"],
+              "variable": [
+                {
+                  "key": "invoiceNumber",
+                  "value": "INV-001",
+                  "description": "Invoice number"
+                }
+              ]
+            },
+            "description": "Obtiene una factura por número de factura"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Invoices by Vehicle",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/invoices/by-vehicle/:vehicleId",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "invoices", "by-vehicle", ":vehicleId"],
+              "variable": [
+                {
+                  "key": "vehicleId",
+                  "value": "",
+                  "description": "Vehicle ID"
+                }
+              ]
+            },
+            "description": "Obtiene facturas por vehículo"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Invoices by Vendor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/invoices/by-vendor/:vendorId",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "invoices", "by-vendor", ":vendorId"],
+              "variable": [
+                {
+                  "key": "vendorId",
+                  "value": "",
+                  "description": "Vendor ID"
+                }
+              ]
+            },
+            "description": "Obtiene facturas por proveedor"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Invoices by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/invoices/by-status/:status",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "invoices", "by-status", ":status"],
+              "variable": [
+                {
+                  "key": "status",
+                  "value": "Draft",
+                  "description": "Invoice status (Draft, PendingAlertReview, Approved, Rejected, Paid, Cancelled)"
+                }
+              ]
+            },
+            "description": "Obtiene facturas por estado"
+          },
+          "response": []
+        },
+        {
+          "name": "Import Invoices",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"vehicleId\": \"vehicle-1\",\n    \"vendorId\": \"vendor-1\",\n    \"invoiceNumber\": \"INV-001\",\n    \"orderStartDate\": \"2025-01-01T00:00:00Z\",\n    \"uploadDate\": \"2025-01-15T00:00:00Z\",\n    \"invoiceAmount\": 1500.50,\n    \"tax\": 120.04\n  },\n  {\n    \"vehicleId\": \"vehicle-2\",\n    \"vendorId\": \"vendor-2\",\n    \"invoiceNumber\": \"INV-002\",\n    \"orderStartDate\": \"2025-01-02T00:00:00Z\",\n    \"uploadDate\": \"2025-01-16T00:00:00Z\",\n    \"invoiceAmount\": 2500.00,\n    \"tax\": 200.00\n  }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/invoices/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "invoices", "import"]
+            },
+            "description": "Importa múltiples facturas"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Service Types",
+      "item": [
+        {
+          "name": "Get All Service Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-types?q=&status=&type=&skip=0&take=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-types"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search query"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status (Active, Inactive)"
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "description": "Filter by type (Service, Sales)"
+                },
+                {
+                  "key": "skip",
+                  "value": "0",
+                  "description": "Number of items to skip (pagination)"
+                },
+                {
+                  "key": "take",
+                  "value": "10",
+                  "description": "Number of items to take (pagination)"
+                }
+              ]
+            },
+            "description": "Obtiene todos los tipos de servicio con filtros opcionales"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Service Type by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-types/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-types", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Service Type ID"
+                }
+              ]
+            },
+            "description": "Obtiene un tipo de servicio por ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Service Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Oil Change\",\n  \"description\": \"Standard oil change service\",\n  \"status\": \"Active\",\n  \"type\": \"Service\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-types"]
+            },
+            "description": "Crea un nuevo tipo de servicio"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Service Type",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Inactive\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-types/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-types", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Service Type ID"
+                }
+              ]
+            },
+            "description": "Actualiza un tipo de servicio existente"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Service Type",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-types/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-types", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Service Type ID"
+                }
+              ]
+            },
+            "description": "Elimina un tipo de servicio"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Service Types by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-types/by-status/:status",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-types", "by-status", ":status"],
+              "variable": [
+                {
+                  "key": "status",
+                  "value": "Active",
+                  "description": "Service Type status (Active, Inactive)"
+                }
+              ]
+            },
+            "description": "Obtiene tipos de servicio por estado"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Service Types by Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-types/by-type/:type",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-types", "by-type", ":type"],
+              "variable": [
+                {
+                  "key": "type",
+                  "value": "Service",
+                  "description": "Service Type type (Service, Sales)"
+                }
+              ]
+            },
+            "description": "Obtiene tipos de servicio por tipo"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Service Types by Status and Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-types/by-status-type/:status/:type",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-types", "by-status-type", ":status", ":type"],
+              "variable": [
+                {
+                  "key": "status",
+                  "value": "Active",
+                  "description": "Service Type status (Active, Inactive)"
+                },
+                {
+                  "key": "type",
+                  "value": "Service",
+                  "description": "Service Type type (Service, Sales)"
+                }
+              ]
+            },
+            "description": "Obtiene tipos de servicio por estado y tipo"
+          },
+          "response": []
+        },
+        {
+          "name": "Import Service Types",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"name\": \"Oil Change\",\n    \"description\": \"Standard oil change\",\n    \"status\": \"Active\",\n    \"type\": \"Service\"\n  },\n  {\n    \"name\": \"Brake Replacement\",\n    \"description\": \"Complete brake system replacement\",\n    \"status\": \"Active\",\n    \"type\": \"Service\"\n  }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-types/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-types", "import"]
+            },
+            "description": "Importa múltiples tipos de servicio"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Line Items",
+      "item": [
+        {
+          "name": "Get All Line Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/line-items?q=&serviceTypeId=&invoiceId=&type=&taxable=&warranty=&minUnitPrice=&maxUnitPrice=&minQuantity=&maxQuantity=&minTotalPrice=&maxTotalPrice=&minMileage=&maxMileage=&skip=0&take=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "line-items"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search query"
+                },
+                {
+                  "key": "serviceTypeId",
+                  "value": "",
+                  "description": "Filter by service type ID"
+                },
+                {
+                  "key": "invoiceId",
+                  "value": "",
+                  "description": "Filter by invoice ID"
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "description": "Filter by type (Parts, Labor)"
+                },
+                {
+                  "key": "taxable",
+                  "value": "",
+                  "description": "Filter by taxable (true, false)"
+                },
+                {
+                  "key": "warranty",
+                  "value": "",
+                  "description": "Filter by warranty (true, false)"
+                },
+                {
+                  "key": "minUnitPrice",
+                  "value": "",
+                  "description": "Minimum unit price"
+                },
+                {
+                  "key": "maxUnitPrice",
+                  "value": "",
+                  "description": "Maximum unit price"
+                },
+                {
+                  "key": "minQuantity",
+                  "value": "",
+                  "description": "Minimum quantity"
+                },
+                {
+                  "key": "maxQuantity",
+                  "value": "",
+                  "description": "Maximum quantity"
+                },
+                {
+                  "key": "minTotalPrice",
+                  "value": "",
+                  "description": "Minimum total price"
+                },
+                {
+                  "key": "maxTotalPrice",
+                  "value": "",
+                  "description": "Maximum total price"
+                },
+                {
+                  "key": "minMileage",
+                  "value": "",
+                  "description": "Minimum mileage"
+                },
+                {
+                  "key": "maxMileage",
+                  "value": "",
+                  "description": "Maximum mileage"
+                },
+                {
+                  "key": "skip",
+                  "value": "0",
+                  "description": "Number of items to skip (pagination)"
+                },
+                {
+                  "key": "take",
+                  "value": "10",
+                  "description": "Number of items to take (pagination)"
+                }
+              ]
+            },
+            "description": "Obtiene todos los items de línea con filtros opcionales"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Line Item by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/line-items/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "line-items", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Line Item ID"
+                }
+              ]
+            },
+            "description": "Obtiene un item de línea por ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Line Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceTypeId\": \"service-type-id\",\n  \"invoiceId\": \"invoice-id\",\n  \"unitPrice\": 25.50,\n  \"quantity\": 2,\n  \"type\": \"Parts\",\n  \"mileage\": 50000,\n  \"taxable\": true,\n  \"warranty\": true,\n  \"warrantyMileage\": 60000,\n  \"warrantyDate\": \"2026-01-15T00:00:00Z\",\n  \"description\": \"Oil filter replacement\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/line-items",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "line-items"]
+            },
+            "description": "Crea un nuevo item de línea"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Line Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unitPrice\": 30.00,\n  \"quantity\": 3,\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/line-items/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "line-items", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Line Item ID"
+                }
+              ]
+            },
+            "description": "Actualiza un item de línea existente"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Line Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/line-items/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "line-items", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Line Item ID"
+                }
+              ]
+            },
+            "description": "Elimina un item de línea"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Line Items by Invoice",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/line-items/by-invoice/:invoiceId",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "line-items", "by-invoice", ":invoiceId"],
+              "variable": [
+                {
+                  "key": "invoiceId",
+                  "value": "",
+                  "description": "Invoice ID"
+                }
+              ]
+            },
+            "description": "Obtiene items de línea por factura"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Line Items by Service Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/line-items/by-service-type/:serviceTypeId",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "line-items", "by-service-type", ":serviceTypeId"],
+              "variable": [
+                {
+                  "key": "serviceTypeId",
+                  "value": "",
+                  "description": "Service Type ID"
+                }
+              ]
+            },
+            "description": "Obtiene items de línea por tipo de servicio"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Line Items by Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/line-items/by-type/:type",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "line-items", "by-type", ":type"],
+              "variable": [
+                {
+                  "key": "type",
+                  "value": "Parts",
+                  "description": "Line Item type (Parts, Labor)"
+                }
+              ]
+            },
+            "description": "Obtiene items de línea por tipo"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Line Items by Taxable",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/line-items/taxable/:taxable",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "line-items", "taxable", ":taxable"],
+              "variable": [
+                {
+                  "key": "taxable",
+                  "value": "true",
+                  "description": "Taxable status (true, false)"
+                }
+              ]
+            },
+            "description": "Obtiene items de línea por estado de impuestos"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Line Items by Warranty",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/line-items/warranty/:warranty",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "line-items", "warranty", ":warranty"],
+              "variable": [
+                {
+                  "key": "warranty",
+                  "value": "true",
+                  "description": "Warranty status (true, false)"
+                }
+              ]
+            },
+            "description": "Obtiene items de línea por estado de garantía"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Line Items by Service Type, Type and Unit Price",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/line-items/filter/:serviceTypeId/:type/:unitPrice",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "line-items", "filter", ":serviceTypeId", ":type", ":unitPrice"],
+              "variable": [
+                {
+                  "key": "serviceTypeId",
+                  "value": "",
+                  "description": "Service Type ID"
+                },
+                {
+                  "key": "type",
+                  "value": "Parts",
+                  "description": "Line Item type (Parts, Labor)"
+                },
+                {
+                  "key": "unitPrice",
+                  "value": "25.50",
+                  "description": "Unit price"
+                }
+              ]
+            },
+            "description": "Obtiene items de línea por tipo de servicio, tipo y precio unitario"
+          },
+          "response": []
+        },
+        {
+          "name": "Import Line Items",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"serviceTypeId\": \"service-type-1\",\n    \"invoiceId\": \"invoice-1\",\n    \"unitPrice\": 25.50,\n    \"quantity\": 2,\n    \"type\": \"Parts\"\n  },\n  {\n    \"serviceTypeId\": \"service-type-2\",\n    \"invoiceId\": \"invoice-1\",\n    \"unitPrice\": 100.00,\n    \"quantity\": 1,\n    \"type\": \"Labor\"\n  }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/line-items/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "line-items", "import"]
+            },
+            "description": "Importa múltiples items de línea"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Vehicles",
+      "item": [
+        {
+          "name": "Get All Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vehicles?vin=&tagNumber=&status=&make=&year=",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vehicles"],
+              "query": [
+                {
+                  "key": "vin",
+                  "value": "",
+                  "description": "Filter by VIN"
+                },
+                {
+                  "key": "tagNumber",
+                  "value": "",
+                  "description": "Filter by tag number"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status (Active, Inactive)"
+                },
+                {
+                  "key": "make",
+                  "value": "",
+                  "description": "Filter by make"
+                },
+                {
+                  "key": "year",
+                  "value": "",
+                  "description": "Filter by year"
+                }
+              ]
+            },
+            "description": "Obtiene todos los vehículos con filtros opcionales"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Vehicle by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vehicles/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vehicles", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Vehicle ID"
+                }
+              ]
+            },
+            "description": "Obtiene un vehículo por ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"truckExternalId\": \"TRUCK-001\",\n  \"companyDispatchLocation\": \"Miami, FL\",\n  \"titleHolder\": \"Company LLC\",\n  \"tireSize\": \"P225/65R17\",\n  \"status\": \"Active\",\n  \"vin\": \"1HGBH41JXMN109186\",\n  \"tagNumber\": \"ABC1234\",\n  \"lastPreventativeMaintenanceDate\": \"2025-01-01T00:00:00Z\",\n  \"modivcareInspectionDate\": \"2025-01-05T00:00:00Z\",\n  \"aliviInspectionDate\": \"2025-01-06T00:00:00Z\",\n  \"ride2MdInspectionDate\": \"2025-01-07T00:00:00Z\",\n  \"insuranceExpirationDate\": \"2026-01-01T00:00:00Z\",\n  \"tagExpirationDate\": \"2026-02-01T00:00:00Z\",\n  \"annualInspectionExpirationDate\": \"2026-03-01T00:00:00Z\",\n  \"registrationExpirationDate\": \"2026-04-01T00:00:00Z\",\n  \"make\": \"Toyota\",\n  \"color\": \"White\",\n  \"year\": 2022\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/vehicles",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vehicles"]
+            },
+            "description": "Crea un nuevo vehículo"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Vehicle",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Inactive\",\n  \"color\": \"Black\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/vehicles/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vehicles", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Vehicle ID"
+                }
+              ]
+            },
+            "description": "Actualiza un vehículo existente"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Vehicle",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vehicles/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vehicles", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Vehicle ID"
+                }
+              ]
+            },
+            "description": "Elimina un vehículo"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Vehicle by VIN",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vehicles/by-vin/:vin",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vehicles", "by-vin", ":vin"],
+              "variable": [
+                {
+                  "key": "vin",
+                  "value": "1HGBH41JXMN109186",
+                  "description": "Vehicle VIN"
+                }
+              ]
+            },
+            "description": "Obtiene un vehículo por VIN"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Vehicle by Tag Number",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vehicles/by-tag/:tagNumber",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vehicles", "by-tag", ":tagNumber"],
+              "variable": [
+                {
+                  "key": "tagNumber",
+                  "value": "ABC1234",
+                  "description": "Vehicle tag number"
+                }
+              ]
+            },
+            "description": "Obtiene un vehículo por número de placa"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Vehicles by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vehicles/by-status/:status",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vehicles", "by-status", ":status"],
+              "variable": [
+                {
+                  "key": "status",
+                  "value": "Active",
+                  "description": "Vehicle status (Active, Inactive)"
+                }
+              ]
+            },
+            "description": "Obtiene vehículos por estado"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Vehicles by Make and Year",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vehicles/by-make-year/:make/:year",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vehicles", "by-make-year", ":make", ":year"],
+              "variable": [
+                {
+                  "key": "make",
+                  "value": "Toyota",
+                  "description": "Vehicle make"
+                },
+                {
+                  "key": "year",
+                  "value": "2022",
+                  "description": "Vehicle year"
+                }
+              ]
+            },
+            "description": "Obtiene vehículos por marca y año"
+          },
+          "response": []
+        },
+        {
+          "name": "Import Vehicles",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"truckExternalId\": \"TRUCK-001\",\n    \"companyDispatchLocation\": \"Miami, FL\",\n    \"titleHolder\": \"Company LLC\",\n    \"tireSize\": \"P225/65R17\",\n    \"vin\": \"1HGBH41JXMN109186\",\n    \"tagNumber\": \"ABC1234\",\n    \"lastPreventativeMaintenanceDate\": \"2025-01-01T00:00:00Z\",\n    \"modivcareInspectionDate\": \"2025-01-05T00:00:00Z\",\n    \"aliviInspectionDate\": \"2025-01-06T00:00:00Z\",\n    \"ride2MdInspectionDate\": \"2025-01-07T00:00:00Z\",\n    \"insuranceExpirationDate\": \"2026-01-01T00:00:00Z\",\n    \"tagExpirationDate\": \"2026-02-01T00:00:00Z\",\n    \"annualInspectionExpirationDate\": \"2026-03-01T00:00:00Z\",\n    \"registrationExpirationDate\": \"2026-04-01T00:00:00Z\",\n    \"make\": \"Toyota\",\n    \"color\": \"White\",\n    \"year\": 2022\n  }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/vehicles/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vehicles", "import"]
+            },
+            "description": "Importa múltiples vehículos"
+          },
+          "response": []
+        },
+        {
+          "name": "Decode VIN",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vehicles/decode-vin/:vin",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vehicles", "decode-vin", ":vin"],
+              "variable": [
+                {
+                  "key": "vin",
+                  "value": "5UXWX7C5*BA",
+                  "description": "Vehicle VIN (17 characters)"
+                }
+              ]
+            },
+            "description": "Decodifica un VIN usando la API de NHTSA y retorna información del vehículo"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Vendors",
       "item": [
         {
@@ -198,6 +1781,156 @@
               "path": ["v1", "vendors", "import"]
             },
             "description": "Importa múltiples vendors"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "MSAL Auth",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/msal-auth/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "msal-auth", "health"]
+            },
+            "description": "Health check del servicio MSAL (sin autenticación)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Config",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/msal-auth/config",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "msal-auth", "config"]
+            },
+            "description": "Ver configuración de Azure AD (sin autenticación)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/msal-auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "msal-auth", "me"]
+            },
+            "description": "Obtiene información del usuario autenticado (requiere Bearer token)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/msal-auth/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "msal-auth", "roles"]
+            },
+            "description": "Obtiene roles del usuario autenticado"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Auth Context",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/msal-auth/context",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "msal-auth", "context"]
+            },
+            "description": "Obtiene contexto completo de autenticación"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"access_admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/msal-auth/check-role",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "msal-auth", "check-role"]
+            },
+            "description": "Verifica si el usuario tiene un rol específico"
+          },
+          "response": []
+        },
+        {
+          "name": "Require Role (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"access_admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/msal-auth/require-role",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "msal-auth", "require-role"]
+            },
+            "description": "Endpoint de prueba que requiere rol específico (retorna 403 si no tiene el rol)"
+          },
+          "response": []
+        },
+        {
+          "name": "Require Role (User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"access_user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/msal-auth/require-role",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "msal-auth", "require-role"]
+            },
+            "description": "Endpoint de prueba que requiere rol de usuario"
           },
           "response": []
         }

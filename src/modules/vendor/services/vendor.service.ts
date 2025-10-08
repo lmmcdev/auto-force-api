@@ -4,6 +4,7 @@ import { Vendor, VendorEntity, VendorStatus, VendorType } from "../entities/vend
 import { CreateVendorDTO } from "../dto/create-vendor.dto";
 import { UpdateVendorDTO } from "../dto/update-vendor.dto";
 import { QueryVendorDTO } from '../dto/query-vendor.dto';
+import { PaginatedResponse } from '../../../common/types/pagination.types';
 
 function nowIso() { return new Date().toISOString(); }
 
@@ -77,9 +78,8 @@ export class VendorService {
     return resources
   }  
 
-  async find(query: QueryVendorDTO = {}): Promise<{ data: Vendor[]; total: number }> {
-    const take = Math.max(1, Math.min(query.take ?? 50, 1000)); // Limit between 1-1000
-    const skip = Math.max(0, query.skip ?? 0);
+  async find(query: QueryVendorDTO = {}): Promise<PaginatedResponse<Vendor>> {
+    const pageSize = Math.max(1, Math.min(query.pageSize ?? 50, 1000));
 
     // Build dynamic query based on provided filters
     let whereClause = 'WHERE 1=1';
@@ -106,22 +106,39 @@ export class VendorService {
     };
 
     try {
-      const { resources } = await this.container.items.query<Vendor>(q).fetchAll();
-      const total = resources.length;
-      const data = resources.slice(skip, skip + take);
+      // Use native Cosmos DB pagination with continuation token
+      const queryIterator = this.container.items.query<Vendor>(q, {
+        maxItemCount: pageSize,
+        continuationToken: query.continuationToken
+      });
 
-      return { data, total };
+      const { resources, continuationToken, hasMoreResults } = await queryIterator.fetchNext();
+
+      return {
+        data: resources,
+        continuationToken: continuationToken || undefined,
+        hasMore: hasMoreResults,
+        pageSize: resources.length
+      };
     } catch (error) {
       console.error('Cosmos DB query error:', error);
       // Fallback to simple query without filters
       const fallbackQuery: SqlQuerySpec = {
         query: 'SELECT * FROM c ORDER BY c.name'
       };
-      const { resources } = await this.container.items.query<Vendor>(fallbackQuery).fetchAll();
-      const total = resources.length;
-      const data = resources.slice(skip, skip + take);
+      const queryIterator = this.container.items.query<Vendor>(fallbackQuery, {
+        maxItemCount: pageSize,
+        continuationToken: query.continuationToken
+      });
 
-      return { data, total };
+      const { resources, continuationToken, hasMoreResults } = await queryIterator.fetchNext();
+
+      return {
+        data: resources,
+        continuationToken: continuationToken || undefined,
+        hasMore: hasMoreResults,
+        pageSize: resources.length
+      };
     }
   }
 
@@ -191,6 +208,41 @@ export class VendorService {
 
     const { resources } = await this.container.items.query<Vendor>(q).fetchAll();
     return resources;
+  }
+
+  // Count vendors with optional filters
+  async count(query: QueryVendorDTO = {}): Promise<number> {
+    // Build dynamic query based on provided filters
+    let whereClause = 'WHERE 1=1';
+    const parameters: any[] = [];
+
+    if (query.status) {
+      whereClause += ' AND c.status = @status';
+      parameters.push({ name: '@status', value: query.status });
+    }
+
+    if (query.type) {
+      whereClause += ' AND c.type = @type';
+      parameters.push({ name: '@type', value: query.type });
+    }
+
+    if (query.q && query.q.trim()) {
+      whereClause += ' AND CONTAINS(LOWER(c.name), LOWER(@q))';
+      parameters.push({ name: '@q', value: query.q.trim() });
+    }
+
+    const q: SqlQuerySpec = {
+      query: `SELECT VALUE COUNT(1) FROM c ${whereClause}`,
+      parameters: parameters
+    };
+
+    try {
+      const { resources } = await this.container.items.query<number>(q).fetchAll();
+      return resources[0] || 0;
+    } catch (error) {
+      console.error('Cosmos DB count error:', error);
+      return 0;
+    }
   }
 
   async bulkImport(vendors: Vendor[]): Promise<{ success: Vendor[]; errors: { item: any; error: string }[] }> {

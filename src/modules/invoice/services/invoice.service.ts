@@ -1,11 +1,19 @@
 import { SqlQuerySpec } from '@azure/cosmos';
-import { getInvoicesContainer, getVehiclesContainer, getVendorsContainer, getLineItemsContainer } from '../../../infra/cosmos';
+import {
+  getInvoicesContainer,
+  getVehiclesContainer,
+  getVendorsContainer,
+  getLineItemsContainer,
+} from '../../../infra/cosmos';
 import { Invoice, InvoiceStatus } from '../entities/invoice.entity';
 import { CreateInvoiceDto } from '../dto/create-invoice.dto';
 import { UpdateInvoiceDto } from '../dto/update-invoice.dto';
 import { QueryInvoiceDto } from '../dto/query-invoice.dto';
+import { PaginatedResponse } from '../../../common/types/pagination.types';
 
-function nowIso() { return new Date().toISOString(); }
+function nowIso() {
+  return new Date().toISOString();
+}
 
 // Helper para remover campos undefined (Cosmos no acepta undefined, solo null)
 function cleanUndefined<T>(obj: T): T {
@@ -23,7 +31,6 @@ function cleanUndefined<T>(obj: T): T {
 }
 
 export class InvoiceService {
-
   private get container() {
     return getInvoicesContainer();
   }
@@ -40,7 +47,7 @@ export class InvoiceService {
     return getLineItemsContainer();
   }
 
-  async create(payload: Omit<Invoice, "id" | "createdAt" | "updatedAt">): Promise<Invoice> {
+  async create(payload: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Invoice> {
     // Validate required fields
     if (!payload.vehicleId?.trim()) throw new Error('vehicleId is required');
     if (!payload.vendorId?.trim()) throw new Error('vendorId is required');
@@ -66,7 +73,7 @@ export class InvoiceService {
     // Check for duplicate invoice number
     const query: SqlQuerySpec = {
       query: 'SELECT TOP 1 * FROM c WHERE c.invoiceNumber = @invoiceNumber',
-      parameters: [{ name: '@invoiceNumber', value: payload.invoiceNumber }]
+      parameters: [{ name: '@invoiceNumber', value: payload.invoiceNumber }],
     };
     const { resources } = await this.container.items.query<Invoice>(query).fetchAll();
     if (resources.length > 0) {
@@ -105,15 +112,14 @@ export class InvoiceService {
 
   async findAll(): Promise<Invoice[]> {
     const query: SqlQuerySpec = {
-      query: `SELECT * FROM c ORDER BY c.uploadDate DESC`
+      query: `SELECT * FROM c ORDER BY c.uploadDate DESC`,
     };
     const { resources } = await this.container.items.query(query).fetchAll();
     return resources;
   }
 
-  async find(query: QueryInvoiceDto = {}): Promise<{ data: Invoice[]; total: number }> {
-    const take = Math.max(1, Math.min(query.take ?? 50, 1000));
-    const skip = Math.max(0, query.skip ?? 0);
+  async find(query: QueryInvoiceDto = {}): Promise<PaginatedResponse<Invoice>> {
+    const pageSize = Math.max(1, Math.min(query.pageSize ?? 50, 1000));
 
     // Build dynamic query
     let whereClause = 'WHERE 1=1';
@@ -140,7 +146,8 @@ export class InvoiceService {
     }
 
     if (query.q && query.q.trim()) {
-      whereClause += ' AND (CONTAINS(LOWER(c.invoiceNumber), LOWER(@q)) OR CONTAINS(LOWER(c.description), LOWER(@q)))';
+      whereClause +=
+        ' AND (CONTAINS(LOWER(c.invoiceNumber), LOWER(@q)) OR CONTAINS(LOWER(c.description), LOWER(@q)))';
       parameters.push({ name: '@q', value: query.q.trim() });
     }
 
@@ -176,26 +183,94 @@ export class InvoiceService {
 
     const q: SqlQuerySpec = {
       query: `SELECT * FROM c ${whereClause} ORDER BY c.uploadDate DESC`,
-      parameters: parameters
+      parameters: parameters,
     };
 
     try {
-      const { resources } = await this.container.items.query<Invoice>(q).fetchAll();
-      const total = resources.length;
-      const data = resources.slice(skip, skip + take);
+      // Use native Cosmos DB pagination with continuation token
+      // The SDK stores continuation internally, we need to access it via getAsyncIterator
 
-      return { data, total };
+      const queryIterator = this.container.items.query<Invoice>(q, {
+        maxItemCount: pageSize,
+        continuationToken: query.continuationToken,
+      });
+
+      // Get the first page
+      const feedResponse = await queryIterator.fetchNext();
+
+      // The continuation token is available in the FeedResponse
+      // We need to check if there are more results and get the token for the next page
+      let nextContinuationToken: string | undefined = undefined;
+
+      // If there are more results, the iterator will have the continuation token
+      if (feedResponse.hasMoreResults) {
+        // We need to peek at the iterator's internal state
+        // The continuation token is stored in queryIterator after fetchNext()
+        const iteratorState = queryIterator as any;
+        const executionContext = iteratorState.queryExecutionContext;
+
+        // Try different property names that might contain the token
+        if (executionContext) {
+          const endpoint = executionContext.endpoint;
+          const fetchMoreRespHeaders = executionContext.fetchMoreRespHeaders;
+
+          console.log('Deep dive into execution context:', {
+            hasEndpoint: !!endpoint,
+            endpointKeys: endpoint ? Object.keys(endpoint) : [],
+            hasFetchMoreRespHeaders: !!fetchMoreRespHeaders,
+            fetchMoreRespHeadersKeys: fetchMoreRespHeaders ? Object.keys(fetchMoreRespHeaders) : [],
+            fetchMoreRespHeaders: fetchMoreRespHeaders,
+          });
+
+          // Check if the continuation token is in the endpoint or response headers
+          nextContinuationToken =
+            endpoint?.continuationToken ||
+            endpoint?._continuationToken ||
+            fetchMoreRespHeaders?.['x-ms-continuation'] ||
+            executionContext.continuationToken ||
+            iteratorState.continuationToken;
+
+          console.log('Token extraction attempt:', {
+            fromEndpoint: endpoint?.continuationToken,
+            fromEndpointPrivate: endpoint?._continuationToken,
+            fromHeaders: fetchMoreRespHeaders?.['x-ms-continuation'],
+            finalToken: nextContinuationToken,
+          });
+        }
+      }
+
+      console.log('Pagination result:', {
+        resourcesCount: feedResponse?.resources?.length,
+        hasMoreResults: feedResponse?.hasMoreResults,
+        continuationToken: nextContinuationToken,
+        tokenType: typeof nextContinuationToken,
+      });
+
+      return {
+        data: feedResponse?.resources,
+        continuationToken: nextContinuationToken || null,
+        hasMore: feedResponse?.hasMoreResults,
+        pageSize: feedResponse?.resources?.length,
+      };
     } catch (error) {
       console.error('Cosmos DB query error:', error);
       // Fallback to simple query
       const fallbackQuery: SqlQuerySpec = {
-        query: 'SELECT * FROM c ORDER BY c.uploadDate DESC'
+        query: 'SELECT * FROM c ORDER BY c.uploadDate DESC',
       };
-      const { resources } = await this.container.items.query<Invoice>(fallbackQuery).fetchAll();
-      const total = resources.length;
-      const data = resources.slice(skip, skip + take);
+      const queryIterator = this.container.items.query<Invoice>(fallbackQuery, {
+        maxItemCount: pageSize,
+        continuationToken: query.continuationToken,
+      });
 
-      return { data, total };
+      const { resources, continuationToken, hasMoreResults } = await queryIterator.fetchNext();
+
+      return {
+        data: resources,
+        continuationToken: continuationToken ?? null,
+        hasMore: hasMoreResults,
+        pageSize: resources.length,
+      };
     }
   }
 
@@ -204,22 +279,27 @@ export class InvoiceService {
     if (!current) throw new Error('invoice not found');
 
     // Validate that invoice with 'PendingAlertReview' status cannot change to other statuses if pending alerts exist
-    if (payload.status &&
-        current.status === 'PendingAlertReview' &&
-        payload.status !== 'PendingAlertReview') {
-
+    if (
+      payload.status &&
+      current.status === 'PendingAlertReview' &&
+      payload.status !== 'PendingAlertReview'
+    ) {
       // Import AlertService dynamically to avoid circular dependency
       const { alertService } = await import('../../alert/services/alert.service');
       const alerts = await alertService.getAlertsByInvoiceIdAndStatus(id, 'Pending');
 
       if (alerts.length > 0) {
-        throw new Error(`Cannot change invoice status from 'PendingAlertReview' to '${payload.status}' because there are ${alerts.length} pending alert(s) for this invoice`);
+        throw new Error(
+          `Cannot change invoice status from 'PendingAlertReview' to '${payload.status}' because there are ${alerts.length} pending alert(s) for this invoice`
+        );
       }
     }
 
     // Validate vehicle exists if changing vehicleId
     if (payload.vehicleId && payload.vehicleId !== current.vehicleId) {
-      const vehicle = await this.vehiclesContainer.item(payload.vehicleId, payload.vehicleId).read();
+      const vehicle = await this.vehiclesContainer
+        .item(payload.vehicleId, payload.vehicleId)
+        .read();
       if (!vehicle.resource) {
         throw new Error(`Vehicle with id '${payload.vehicleId}' not found`);
       }
@@ -248,9 +328,12 @@ export class InvoiceService {
     const next: Invoice = {
       ...current,
       ...payload,
-      invoiceAmount: payload.invoiceAmount !== undefined ? Number(payload.invoiceAmount.toFixed(2)) : current.invoiceAmount,
+      invoiceAmount:
+        payload.invoiceAmount !== undefined
+          ? Number(payload.invoiceAmount.toFixed(2))
+          : current.invoiceAmount,
       tax: payload.tax !== undefined ? Number(payload.tax.toFixed(2)) : current.tax,
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     };
 
     await this.container.item(id, id).replace(next);
@@ -282,7 +365,7 @@ export class InvoiceService {
   async findByInvoiceNumber(invoiceNumber: string): Promise<Invoice | null> {
     const q: SqlQuerySpec = {
       query: 'SELECT TOP 1 * FROM c WHERE c.invoiceNumber = @invoiceNumber',
-      parameters: [{ name: '@invoiceNumber', value: invoiceNumber }]
+      parameters: [{ name: '@invoiceNumber', value: invoiceNumber }],
     };
     const { resources } = await this.container.items.query<Invoice>(q).fetchAll();
     return resources[0] ?? null;
@@ -292,7 +375,7 @@ export class InvoiceService {
   async findByVehicleId(vehicleId: string): Promise<Invoice[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.vehicleId = @vehicleId ORDER BY c.uploadDate DESC',
-      parameters: [{ name: '@vehicleId', value: vehicleId }]
+      parameters: [{ name: '@vehicleId', value: vehicleId }],
     };
     const { resources } = await this.container.items.query<Invoice>(q).fetchAll();
     return resources;
@@ -302,7 +385,7 @@ export class InvoiceService {
   async findByVendorId(vendorId: string): Promise<Invoice[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.vendorId = @vendorId ORDER BY c.uploadDate DESC',
-      parameters: [{ name: '@vendorId', value: vendorId }]
+      parameters: [{ name: '@vendorId', value: vendorId }],
     };
     const { resources } = await this.container.items.query<Invoice>(q).fetchAll();
     return resources;
@@ -312,14 +395,16 @@ export class InvoiceService {
   async findByStatus(status: InvoiceStatus): Promise<Invoice[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.status = @status ORDER BY c.uploadDate DESC',
-      parameters: [{ name: '@status', value: status }]
+      parameters: [{ name: '@status', value: status }],
     };
     const { resources } = await this.container.items.query<Invoice>(q).fetchAll();
     return resources;
   }
 
   // Bulk import
-  async bulkImport(invoices: Invoice[]): Promise<{ success: Invoice[]; errors: { item: any; error: string }[] }> {
+  async bulkImport(
+    invoices: Invoice[]
+  ): Promise<{ success: Invoice[]; errors: { item: any; error: string }[] }> {
     const success: Invoice[] = [];
     const errors: { item: any; error: string }[] = [];
 
@@ -353,7 +438,10 @@ export class InvoiceService {
         // Check if invoice with same invoice number already exists
         const existingByNumber = await this.findByInvoiceNumber(item.invoiceNumber);
         if (existingByNumber) {
-          errors.push({ item, error: `invoice with invoice number '${item.invoiceNumber}' already exists` });
+          errors.push({
+            item,
+            error: `invoice with invoice number '${item.invoiceNumber}' already exists`,
+          });
           continue;
         }
 
@@ -377,7 +465,7 @@ export class InvoiceService {
       } catch (error: any) {
         errors.push({
           item,
-          error: error.message || 'Failed to create invoice'
+          error: error.message || 'Failed to create invoice',
         });
       }
     }
@@ -390,10 +478,12 @@ export class InvoiceService {
     // Get all line items for this invoice
     const lineItemsQuery: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.invoiceId = @invoiceId',
-      parameters: [{ name: '@invoiceId', value: id }]
+      parameters: [{ name: '@invoiceId', value: id }],
     };
 
-    const { resources: lineItems } = await this.lineItemsContainer.items.query(lineItemsQuery).fetchAll();
+    const { resources: lineItems } = await this.lineItemsContainer.items
+      .query(lineItemsQuery)
+      .fetchAll();
 
     // Update each line item if vehicleId or vendorId was provided
     for (const lineItem of lineItems) {
@@ -428,10 +518,12 @@ export class InvoiceService {
     // Get all line items for this invoice
     const lineItemsQuery: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.invoiceId = @invoiceId',
-      parameters: [{ name: '@invoiceId', value: id }]
+      parameters: [{ name: '@invoiceId', value: id }],
     };
 
-    const { resources: lineItems } = await this.lineItemsContainer.items.query(lineItemsQuery).fetchAll();
+    const { resources: lineItems } = await this.lineItemsContainer.items
+      .query(lineItemsQuery)
+      .fetchAll();
 
     // Calculate subTotal from all line items
     const subTotal = lineItems.reduce((sum, lineItem) => {
@@ -461,9 +553,9 @@ export class InvoiceService {
     const updatedInvoice: Invoice = {
       ...invoice,
       invoiceAmount: formattedInvoiceAmount, // subTotal + tax
-      tax: formattedTax,                    // calculated tax from taxable items
-      subTotal : formattedSubTotal,
-      updatedAt: nowIso()
+      tax: formattedTax, // calculated tax from taxable items
+      subTotal: formattedSubTotal,
+      updatedAt: nowIso(),
     };
 
     // Save the updated invoice
@@ -490,6 +582,82 @@ export class InvoiceService {
     return invoice.status;
   }
 
+  // Count invoices with optional filters
+  async count(query: QueryInvoiceDto = {}): Promise<number> {
+    // Build dynamic query
+    let whereClause = 'WHERE 1=1';
+    const parameters: any[] = [];
+
+    if (query.vehicleId) {
+      whereClause += ' AND c.vehicleId = @vehicleId';
+      parameters.push({ name: '@vehicleId', value: query.vehicleId });
+    }
+
+    if (query.vendorId) {
+      whereClause += ' AND c.vendorId = @vendorId';
+      parameters.push({ name: '@vendorId', value: query.vendorId });
+    }
+
+    if (query.status) {
+      whereClause += ' AND c.status = @status';
+      parameters.push({ name: '@status', value: query.status });
+    }
+
+    if (query.invoiceNumber) {
+      whereClause += ' AND c.invoiceNumber = @invoiceNumber';
+      parameters.push({ name: '@invoiceNumber', value: query.invoiceNumber });
+    }
+
+    if (query.q && query.q.trim()) {
+      whereClause +=
+        ' AND (CONTAINS(LOWER(c.invoiceNumber), LOWER(@q)) OR CONTAINS(LOWER(c.description), LOWER(@q)))';
+      parameters.push({ name: '@q', value: query.q.trim() });
+    }
+
+    if (query.orderStartDateFrom) {
+      whereClause += ' AND c.orderStartDate >= @orderStartDateFrom';
+      parameters.push({ name: '@orderStartDateFrom', value: query.orderStartDateFrom });
+    }
+
+    if (query.orderStartDateTo) {
+      whereClause += ' AND c.orderStartDate <= @orderStartDateTo';
+      parameters.push({ name: '@orderStartDateTo', value: query.orderStartDateTo });
+    }
+
+    if (query.uploadDateFrom) {
+      whereClause += ' AND c.uploadDate >= @uploadDateFrom';
+      parameters.push({ name: '@uploadDateFrom', value: query.uploadDateFrom });
+    }
+
+    if (query.uploadDateTo) {
+      whereClause += ' AND c.uploadDate <= @uploadDateTo';
+      parameters.push({ name: '@uploadDateTo', value: query.uploadDateTo });
+    }
+
+    if (query.minAmount !== undefined) {
+      whereClause += ' AND c.invoiceAmount >= @minAmount';
+      parameters.push({ name: '@minAmount', value: query.minAmount });
+    }
+
+    if (query.maxAmount !== undefined) {
+      whereClause += ' AND c.invoiceAmount <= @maxAmount';
+      parameters.push({ name: '@maxAmount', value: query.maxAmount });
+    }
+
+    const q: SqlQuerySpec = {
+      query: `SELECT VALUE COUNT(1) FROM c ${whereClause}`,
+      parameters: parameters,
+    };
+
+    try {
+      const { resources } = await this.container.items.query<number>(q).fetchAll();
+      return resources[0] || 0;
+    } catch (error) {
+      console.error('Cosmos DB count error:', error);
+      return 0;
+    }
+  }
+
   // Change invoice status to PendingAlertReview
   async changeStatusToPendingAlertReview(id: string): Promise<Invoice | null> {
     const invoice = await this.getById(id);
@@ -501,7 +669,7 @@ export class InvoiceService {
     const updatedInvoice: Invoice = {
       ...invoice,
       status: 'PendingAlertReview',
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     };
 
     await this.container.item(id, id).replace(updatedInvoice);
@@ -519,7 +687,7 @@ export class InvoiceService {
     const updatedInvoice: Invoice = {
       ...invoice,
       status: 'Draft',
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     };
 
     await this.container.item(id, id).replace(updatedInvoice);

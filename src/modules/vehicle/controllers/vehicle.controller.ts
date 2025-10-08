@@ -5,6 +5,7 @@ import {
   InvocationContext,
 } from "@azure/functions";
 import { vehicleService, VehicleService } from "../services/vehicle.service";
+import { vinDecoderService } from "../services/vin-decoder.service";
 import { CreateVehicleDto } from "../dto/create-vehicle.dto";
 import { UpdateVehicleDto } from "../dto/update-vehicle.dto";
 import { Vehicle } from "../entities/vehicle.entity";
@@ -213,6 +214,41 @@ export class VehicleController {
     }
   }
 
+  // GET /vehicles/decode-vin/{vin}
+  async decodeVin(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const vin = request.params.vin;
+      if (!vin) return { status: 400, jsonBody: { message: "VIN parameter is required" } };
+
+      const decodedData = await vinDecoderService.decodeVin(vin);
+      return { status: 200, jsonBody: { data: decodedData } };
+    } catch (err: any) {
+      context.error("vehicle.decodeVin error", err);
+      return this.toError(err);
+    }
+  }
+
+  // GET /vehicles/count?vin=&tagNumber=&status=&make=&year=
+  async getCount(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const url = new URL(request.url);
+
+      const filters = {
+        vin: url.searchParams.get("vin") ?? undefined,
+        tagNumber: url.searchParams.get("tagNumber") ?? undefined,
+        status: (url.searchParams.get("status") as "Active" | "Inactive") ?? undefined,
+        make: url.searchParams.get("make") ?? undefined,
+        year: url.searchParams.get("year") ? Number(url.searchParams.get("year")) : undefined,
+      };
+
+      const count = await vehicleService.count(filters);
+      return { status: 200, jsonBody: { count } };
+    } catch (err: any) {
+      context.error("vehicle.getCount error", err);
+      return this.toError(err);
+    }
+  }
+
   private toError(err: any): HttpResponseInit {
     const msg = String(err?.message ?? "Internal error");
     const status = /not found/i.test(msg)
@@ -243,6 +279,13 @@ app.http("ImportVehicles", {
   route: `${vehiclesRoute}/import`,
   authLevel: "function",
   handler: (req, ctx) => vehicleController.importList(req, ctx),
+});
+
+app.http("GetVehiclesCount", {
+  methods: ["GET"],
+  route: "v1/count/vehicles",
+  authLevel: "function",
+  handler: (req, ctx) => vehicleController.getCount(req, ctx),
 });
 
 app.http("GetVehicle", {
@@ -300,4 +343,10 @@ app.http("GetVehiclesByMakeAndYear", {
   authLevel: "function",
   handler: (req, ctx) => vehicleController.getByMakeAndYear(req, ctx),
 });
- 
+
+app.http("DecodeVin", {
+  methods: ["GET"],
+  route: `${vehiclesRoute}/decode-vin/{vin}`,
+  authLevel: "function",
+  handler: (req, ctx) => vehicleController.decodeVin(req, ctx),
+});

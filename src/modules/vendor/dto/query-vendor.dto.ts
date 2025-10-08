@@ -28,4 +28,14 @@ export interface QueryVendorDTO{
    */
   take?: number;
 
+  /**
+   * Tamaño de página para paginación con Cosmos DB (1-1000)
+   */
+  pageSize?: number;
+
+  /**
+   * Token de continuación para la siguiente página de resultados
+   */
+  continuationToken?: string;
+
 }

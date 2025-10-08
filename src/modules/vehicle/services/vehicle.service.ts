@@ -132,6 +132,56 @@ async findByVin(vin: string): Promise<Vehicle | null> {
   }
 
 
+  // Count vehicles with optional filters
+  async count(filters: {
+    vin?: string;
+    tagNumber?: string;
+    status?: "Active" | "Inactive";
+    make?: string;
+    year?: number;
+  } = {}): Promise<number> {
+    let whereClause = 'WHERE 1=1';
+    const parameters: any[] = [];
+
+    if (filters.vin) {
+      whereClause += ' AND c.vin = @vin';
+      parameters.push({ name: '@vin', value: filters.vin });
+    }
+
+    if (filters.tagNumber) {
+      whereClause += ' AND c.tagNumber = @tagNumber';
+      parameters.push({ name: '@tagNumber', value: filters.tagNumber });
+    }
+
+    if (filters.status) {
+      whereClause += ' AND c.status = @status';
+      parameters.push({ name: '@status', value: filters.status });
+    }
+
+    if (filters.make) {
+      whereClause += ' AND LOWER(c.make) = LOWER(@make)';
+      parameters.push({ name: '@make', value: filters.make });
+    }
+
+    if (filters.year !== undefined) {
+      whereClause += ' AND c.year = @year';
+      parameters.push({ name: '@year', value: filters.year });
+    }
+
+    const q: SqlQuerySpec = {
+      query: `SELECT VALUE COUNT(1) FROM c ${whereClause}`,
+      parameters: parameters
+    };
+
+    try {
+      const { resources } = await this.container.items.query<number>(q).fetchAll();
+      return resources[0] || 0;
+    } catch (error) {
+      console.error('Cosmos DB count error:', error);
+      return 0;
+    }
+  }
+
   async bulkImport(vehicles: Vehicle[]): Promise<{ success: Vehicle[]; errors: { item: any; error: string }[] }> {
     const success: Vehicle[] = [];
     const errors: { item: any; error: string }[] = [];
