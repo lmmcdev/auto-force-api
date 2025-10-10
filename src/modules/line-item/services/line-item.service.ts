@@ -580,8 +580,10 @@ export class LineItemService {
           id: item.id.trim(),
           serviceTypeId: item.serviceTypeId.trim(),
           invoiceId: item.invoiceId.trim(),
-          vehicleId: invoiceData.vehicleId || '', // Auto-populate from invoice
-          vendorId: invoiceData.vendorId || '',   // Auto-populate from invoice
+         //vhicleId: invoiceData.vehicleId || '', // Auto-populate from invoice
+         //vendorId: invoiceData.vendorId || '',   // Auto-populate from invoice
+          vehicleId: item.vehicleId || invoiceData.vehicleId ,
+          vendorId: item.vendorId || invoiceData.vendorId,
           unitPrice: unitPrice,
           quantity: quantity,
           totalPrice: totalPrice,
@@ -595,6 +597,8 @@ export class LineItemService {
         const cleanDoc = cleanUndefined(doc);
         await this.container.items.create(cleanDoc);
         success.push(cleanDoc);
+
+       /*
 
         // Check warranty date and create alert if needed
         try {
@@ -618,13 +622,15 @@ export class LineItemService {
         } catch (error) {
           console.error(`Failed to check lower price for line item ${cleanDoc.id} during bulk import:`, error);
           // Don't add to errors - line item was imported successfully
-        }
-      } catch (error: any) {
+        }*/
+      }
+       catch (error: any) {
         errors.push({
           item,
           error: error.message || 'Failed to create line item'
         });
       }
+
     }
 
     // Update invoice amounts for all affected invoices
