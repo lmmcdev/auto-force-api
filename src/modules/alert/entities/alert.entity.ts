@@ -2,7 +2,7 @@ export type AlertType = 'WARRANTY' | 'LICENSE' | 'PERMIT' | 'HIGHER_PRICE' | 'CE
 
 export type AlertCategory = 'ServiceType' | 'DriverLicense' | string;
 
-export type AlertReasons = 'DATE_VALID' | 'MILEAGE_VALID' | 'Expiration Date' | string;
+export type AlertReasons = 'DATE_VALID' | 'MILEAGE_VALID' | 'Expiration Date' | 'LOWER_PRICE_FOUND' |string;
 
 export type AlertStatus = 'Pending' | 'Acknowledged' | 'Overridden' | 'Resolved' | string;
 

@@ -330,10 +330,10 @@ export class InvoiceService {
           errors.push({ item, error: 'id is required' });
           continue;
         }
-        if (!item.vehicleId?.trim()) {
+        /* (!item.vehicleId?.trim()) {
           errors.push({ item, error: 'vehicleId is required' });
           continue;
-        }
+        }*/
         if (!item.vendorId?.trim()) {
           errors.push({ item, error: 'vendorId is required' });
           continue;

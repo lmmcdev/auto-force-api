@@ -1,7 +1,7 @@
 import { InvoiceStatus } from '../entities/invoice.entity';
 
 export interface CreateInvoiceDto {
-  vehicleId: string;
+  vehicleId?: string;
   vendorId: string;
   invoiceNumber: string;
   orderStartDate: string;
