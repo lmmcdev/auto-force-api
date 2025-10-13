@@ -88,7 +88,7 @@ export class LineItemService {
       unitPrice: unitPrice,
       quantity: quantity,
       totalPrice: totalPrice,
-      type: payload.type || 'Parts',
+      type: payload.type || 'Labor',
       mileage: Math.floor(payload.mileage || 0), // Ensure integer
       taxable: payload.taxable ?? false,
       warrantyMileage: payload.warrantyMileage ? Math.floor(payload.warrantyMileage) : undefined,
@@ -128,9 +128,17 @@ export class LineItemService {
 
     // Check for lower prices and create alert if needed
     try {
-      await this.checkLowerPrice(doc.serviceTypeId, doc.type, doc.unitPrice, doc.id);
+      await this.checkLowerPrice(doc.serviceTypeId, doc.type, doc.unitPrice, doc.id, doc.vehicleId);
     } catch (error) {
       console.error(`Failed to check lower price for line item ${doc.id}:`, error);
+      // Don't throw error - line item was created successfully
+    }
+
+    // Check for same service and create alert if needed
+    try {
+      await this.checkSameService(doc.serviceTypeId, doc.type, doc.id, doc.vehicleId);
+    } catch (error) {
+      console.error(`Failed to check same service for line item ${doc.id}:`, error);
       // Don't throw error - line item was created successfully
     }
 
@@ -358,10 +366,18 @@ export class LineItemService {
 
     // Check for lower prices and create alert if needed
     try {
-      await this.checkLowerPrice(next.serviceTypeId, next.type, next.unitPrice, next.id);
+      await this.checkLowerPrice(next.serviceTypeId, next.type, next.unitPrice, next.id, next.vehicleId);
     } catch (error) {
       console.error(`Failed to check lower price for line item ${next.id} after update:`, error);
       // Don't throw error - line item was updated successfully
+    }
+
+     // Check for same service and create alert if needed
+    try {
+      await this.checkSameService(next.serviceTypeId, next.type, next.id, next.vehicleId);
+    } catch (error) {
+      console.error(`Failed to check same service for line item ${next.id}:`, error);
+      // Don't throw error - line item was created successfully
     }
 
     return next;
@@ -454,13 +470,28 @@ export class LineItemService {
   }
 
   // Find line items with lower prices for same serviceTypeId and type
-  async findLowerPricesByServiceTypeAndType(serviceTypeId: string, type: LineItemType, unitPrice: number): Promise<LineItem[]> {
+  async findLowerPricesByServiceTypeAndTypeAndVehicleId(serviceTypeId: string, type: LineItemType, unitPrice: number, vehicleId: string): Promise<LineItem[]> {
     const q: SqlQuerySpec = {
-      query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.unitPrice < @unitPrice ORDER BY c.unitPrice ASC',
+      query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.unitPrice < @unitPrice AND c.vehicleId = @vehicleId ORDER BY c.unitPrice ASC',
       parameters: [
         { name: '@serviceTypeId', value: serviceTypeId },
         { name: '@type', value: type },
-        { name: '@unitPrice', value: unitPrice }
+        { name: '@unitPrice', value: unitPrice },
+        { name: '@vehicleId', value: vehicleId }
+      ]
+    };
+    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    return resources;
+  }
+
+  // Find line items with same serviceTypeId and type an VehicleID
+  async findByServiceTypeAndTypeAndVehicleId(serviceTypeId: string, type: LineItemType, vehicleId: string): Promise<LineItem[]> {
+    const q: SqlQuerySpec = {
+      query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.vehicleId = @vehicleId ORDER BY c.unitPrice ASC',
+      parameters: [
+        { name: '@serviceTypeId', value: serviceTypeId },
+        { name: '@type', value: type },
+        { name: '@vehicleId', value: vehicleId }
       ]
     };
     const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
@@ -468,10 +499,10 @@ export class LineItemService {
   }
 
   // Check for lower prices and create alert if found
-  async checkLowerPrice(serviceTypeId: string, type: LineItemType, unitPrice: number, lineItemId: string): Promise<void> {
+  async checkLowerPrice(serviceTypeId: string, type: LineItemType, unitPrice: number, lineItemId: string, vehicleId: string): Promise<void> {
     try {
       // Find line items with lower prices for same serviceTypeId and type
-      const lowerPriceItems = await this.findLowerPricesByServiceTypeAndType(serviceTypeId, type, unitPrice);
+      const lowerPriceItems = await this.findLowerPricesByServiceTypeAndTypeAndVehicleId(serviceTypeId, type, unitPrice, vehicleId);
 
       // Exclude the current line item
       const filteredItems = lowerPriceItems.filter(item => item.id !== lineItemId);
@@ -507,6 +538,50 @@ export class LineItemService {
       }
     } catch (error) {
       console.error(`Failed to check lower price for line item ${lineItemId}:`, error);
+      // Don't throw error to avoid breaking the main operation
+    }
+  }
+
+  // Check for lower prices and create alert if found
+  async checkSameService(serviceTypeId: string, type: LineItemType, lineItemId: string, vehicleId: string): Promise<void> {
+    try {
+      // Find line items with same serviceTypeId and type
+      const sameServiceItems = await this.findByServiceTypeAndTypeAndVehicleId(serviceTypeId, type, vehicleId);
+
+      // Exclude the current line item
+      const filteredItems = sameServiceItems.filter(item => item.id !== lineItemId);
+
+      // If same service items exist, create an alert
+      if (filteredItems.length > 0) {
+        // Get the current line item to extract vehicleId and invoiceId
+        const currentLineItem = await this.getById(lineItemId);
+        if (!currentLineItem) {
+          console.error(`Line item with id ${lineItemId} not found`);
+          return;
+        }
+
+        // Get the first (lowest price) item as validLineItem
+        const validLineItem = filteredItems[0];
+
+        // Create alert
+        const alertData = {
+          type: "SAME_SERVICE",
+          category: "ServiceType",
+          vehicleId: currentLineItem.vehicleId,
+          lineItemId: lineItemId,
+          validLineItem: validLineItem.id,
+          invoiceId: currentLineItem.invoiceId,
+          serviceTypeId: serviceTypeId,
+          reasons: "SAME_SERVICE_FOUND",
+          status: "Pending",
+          message: "A previous line item for this service type was a same service. Please review for potential overpricing."
+        };
+
+        await alertService.create(alertData);
+        console.log(`Alert created for line item ${lineItemId} - same service found: ${validLineItem.serviceTypeId}`);
+      }
+    } catch (error) {
+      console.error(`Failed to check same service for line item ${lineItemId}:`, error);
       // Don't throw error to avoid breaking the main operation
     }
   }
@@ -618,11 +693,20 @@ export class LineItemService {
 
         // Check for lower prices and create alert if needed
         try {
-          await this.checkLowerPrice(cleanDoc.serviceTypeId, cleanDoc.type, cleanDoc.unitPrice, cleanDoc.id);
+          await this.checkLowerPrice(cleanDoc.serviceTypeId, cleanDoc.type, cleanDoc.unitPrice, cleanDoc.id, cleanDoc.vehicleId);
         } catch (error) {
           console.error(`Failed to check lower price for line item ${cleanDoc.id} during bulk import:`, error);
           // Don't add to errors - line item was imported successfully
-        }*/
+        }
+          
+         // Check for same service and create alert if needed
+        try {
+          await this.checkSameService(cleanDoc.serviceTypeId, cleanDoc.type, cleanDoc.id, cleanDoc.vehicleId);
+        } catch (error) {
+          console.error(`Failed to check same service for line item ${cleanDoc.id}:`, error);
+          // Don't throw error - line item was created successfully
+        }
+      */
       }
        catch (error: any) {
         errors.push({
