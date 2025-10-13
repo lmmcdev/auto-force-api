@@ -498,6 +498,20 @@ export class LineItemService {
     return resources;
   }
 
+  // Find line items with same serviceTypeId and type an VehicleID
+  async findByServiceTypeAndTypeAndVehicleIdWithWarrantyTrue(serviceTypeId: string, type: LineItemType, vehicleId: string): Promise<LineItem[]> {
+    const q: SqlQuerySpec = {
+      query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.vehicleId = @vehicleId AND c.warranty = true ORDER BY c.unitPrice ASC',
+      parameters: [
+        { name: '@serviceTypeId', value: serviceTypeId },
+        { name: '@type', value: type },
+        { name: '@vehicleId', value: vehicleId }
+      ]
+    };
+    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    return resources;
+  }
+
   // Check for lower prices and create alert if found
   async checkLowerPrice(serviceTypeId: string, type: LineItemType, unitPrice: number, lineItemId: string, vehicleId: string): Promise<void> {
     try {

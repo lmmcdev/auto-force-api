@@ -244,6 +244,33 @@ export class LineItemController {
     }
   }
 
+  // GET /line-items/warranty-filter/{serviceTypeId}/{type}/{vehicleId}
+  async getByServiceTypeAndTypeAndVehicleIdWithWarrantyTrue(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const serviceTypeId = request.params.serviceTypeId;
+      const type = request.params.type as LineItemType;
+      const vehicleId = request.params.vehicleId;
+
+      if (!serviceTypeId) {
+        return { status: 400, jsonBody: { message: "Service type ID parameter is required" } };
+      }
+
+      if (!type || !["Parts", "Labor"].includes(type)) {
+        return { status: 400, jsonBody: { message: "Invalid type. Must be 'Parts' or 'Labor'" } };
+      }
+
+      if (!vehicleId) {
+        return { status: 400, jsonBody: { message: "Vehicle ID parameter is required" } };
+      }
+
+      const lineItems = await lineItemService.findByServiceTypeAndTypeAndVehicleIdWithWarrantyTrue(serviceTypeId, type, vehicleId);
+      return { status: 200, jsonBody: { data: lineItems } };
+    } catch (err: any) {
+      context.error("lineItem.getByServiceTypeAndTypeAndVehicleIdWithWarrantyTrue error", err);
+      return this.toError(err);
+    }
+  }
+
   // Mapeo de errores a HTTP
   private toError(err: any): HttpResponseInit {
     const msg = String(err?.message ?? "Internal error");
@@ -343,4 +370,11 @@ app.http("GetLineItemsByServiceTypeAndTypeAndUnitPrice", {
   route: `${lineItemsRoute}/filter/{serviceTypeId}/{type}/{unitPrice}`,
   authLevel: "function",
   handler: (req, ctx) => lineItemController.getByServiceTypeIdAndTypeAndUnitPrice(req, ctx),
+});
+
+app.http("GetLineItemsByServiceTypeAndTypeAndVehicleIdWithWarrantyTrue", {
+  methods: ["GET"],
+  route: `${lineItemsRoute}/warranty-filter/{serviceTypeId}/{type}/{vehicleId}`,
+  authLevel: "function",
+  handler: (req, ctx) => lineItemController.getByServiceTypeAndTypeAndVehicleIdWithWarrantyTrue(req, ctx),
 });
