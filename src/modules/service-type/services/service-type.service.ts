@@ -17,8 +17,7 @@ function cleanUndefined<T>(obj: T): T {
   for (const key in obj) {
     const value = obj[key];
     if (value !== undefined) {
-      (cleaned as Record<string, unknown>)[key] =
-        typeof value === 'object' ? cleanUndefined(value) : value;
+      (cleaned as Record<string, unknown>)[key] = typeof value === 'object' ? cleanUndefined(value) : value;
     }
   }
   return cleaned as T;
@@ -94,8 +93,7 @@ export class ServiceTypeService {
     }
 
     if (query.q && query.q.trim()) {
-      whereClause +=
-        ' AND (CONTAINS(LOWER(c.name), LOWER(@q)) OR CONTAINS(LOWER(c.description), LOWER(@q)))';
+      whereClause += ' AND (CONTAINS(LOWER(c.name), LOWER(@q)) OR CONTAINS(LOWER(c.description), LOWER(@q)))';
       parameters.push({ name: '@q', value: query.q.trim() });
     }
 
@@ -131,11 +129,7 @@ export class ServiceTypeService {
     // Validar nombre duplicado si cambia
     if (payload.name && payload.name.trim().toLowerCase() !== current.name.toLowerCase()) {
       const dup = await this.find({ q: payload.name, take: 1 });
-      if (
-        dup.data.some(
-          st => st.id !== id && st.name.toLowerCase() === payload.name!.trim().toLowerCase()
-        )
-      ) {
+      if (dup.data.some(st => st.id !== id && st.name.toLowerCase() === payload.name!.trim().toLowerCase())) {
         throw new Error('service type with same name already exists');
       }
     }
@@ -189,10 +183,7 @@ export class ServiceTypeService {
   }
 
   // Buscar service types por status Y type
-  async findByStatusAndType(
-    status: ServiceTypeStatus,
-    type: ServiceTypeType
-  ): Promise<ServiceType[]> {
+  async findByStatusAndType(status: ServiceTypeStatus, type: ServiceTypeType): Promise<ServiceType[]> {
     const q: SqlQuerySpec = {
       query: `
         SELECT * FROM c

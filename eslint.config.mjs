@@ -6,7 +6,19 @@ import prettierConfig from 'eslint-config-prettier';
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', 'build/**', '*.js.map'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'build/**',
+      '*.js.map',
+      'coverage/**',
+      '*.log',
+      'logs/**',
+      'bin/**',
+      'obj/**',
+      '*.user',
+      'local.settings.json',
+    ],
   },
   eslint.configs.recommended,
   {
@@ -35,15 +47,12 @@ export default [
     },
     rules: {
       ...tseslint.configs.recommended.rules,
-      ...prettierConfig.rules,
-      'prettier/prettier': 'error',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
-      ],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-console': 'off',
+      ...prettierConfig.rules,
+      'prettier/prettier': 'error',
     },
   },
 ];

@@ -24,14 +24,13 @@ export class HealthController {
   async getReadiness(): Promise<{ status: string; ready: boolean }> {
     try {
       const healthStatus = await this.healthService.getHealthStatus();
-      const ready =
-        healthStatus.services.database === 'healthy' && healthStatus.services.api === 'healthy';
+      const ready = healthStatus.services.database === 'healthy' && healthStatus.services.api === 'healthy';
 
       return {
         status: ready ? 'ready' : 'not ready',
         ready,
       };
-    } catch (error) {
+    } catch {
       return {
         status: 'not ready',
         ready: false,
@@ -42,17 +41,14 @@ export class HealthController {
 
 const healthController = new HealthController();
 
-export async function healthCheck(
-  request: HttpRequest,
-  context: InvocationContext
-): Promise<HttpResponseInit> {
+export async function healthCheck(_request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> {
   try {
     const healthStatus = await healthController.getHealthCheck();
     return {
       status: 200,
       jsonBody: healthStatus,
     };
-  } catch (error) {
+  } catch {
     return {
       status: 500,
       jsonBody: { error: 'Health check failed' },
@@ -60,17 +56,14 @@ export async function healthCheck(
   }
 }
 
-export async function health(
-  request: HttpRequest,
-  context: InvocationContext
-): Promise<HttpResponseInit> {
+export async function health(_request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> {
   try {
     const healthStatus = await healthController.getHealth();
     return {
       status: 200,
       jsonBody: healthStatus,
     };
-  } catch (error) {
+  } catch {
     return {
       status: 500,
       jsonBody: { error: 'Health check failed' },

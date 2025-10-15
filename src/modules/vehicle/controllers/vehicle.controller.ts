@@ -151,14 +151,10 @@ export class VehicleController {
   }
 
   // GET /vehicles/by-tag/{tagNumber}
-  async getByTagNumber(
-    request: HttpRequest,
-    context: InvocationContext
-  ): Promise<HttpResponseInit> {
+  async getByTagNumber(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
       const tagNumber = request.params.tagNumber;
-      if (!tagNumber)
-        return { status: 400, jsonBody: { message: 'Tag number parameter is required' } };
+      if (!tagNumber) return { status: 400, jsonBody: { message: 'Tag number parameter is required' } };
 
       const vehicle = await vehicleService.findByTagNumber(tagNumber);
       if (!vehicle) return { status: 404, jsonBody: { message: 'Vehicle not found' } };
@@ -190,10 +186,7 @@ export class VehicleController {
   }
 
   // GET /vehicles/by-make-year/{make}/{year}
-  async getByMakeAndYear(
-    request: HttpRequest,
-    context: InvocationContext
-  ): Promise<HttpResponseInit> {
+  async getByMakeAndYear(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
       const make = request.params.make;
       const yearParam = request.params.year;

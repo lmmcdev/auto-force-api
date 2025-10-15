@@ -1,12 +1,6 @@
 import { SqlQuerySpec } from '@azure/cosmos';
 import { getAlertsContainer } from '../../../infra/cosmos';
-import {
-  Alert,
-  AlertType,
-  AlertCategory,
-  AlertReasons,
-  AlertStatus,
-} from '../entities/alert.entity';
+import { Alert, AlertType, AlertCategory, AlertReasons, AlertStatus } from '../entities/alert.entity';
 import { CreateAlertDto } from '../dto/create-alert.dto';
 import { UpdateAlertDto } from '../dto/update-alert.dto';
 import { QueryAlertDto } from '../dto/query-alert.dto';
@@ -21,14 +15,14 @@ function cleanUndefined<T>(obj: T): T {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj !== 'object') return obj;
 
-  const cleaned: any = Array.isArray(obj) ? [] : {};
+  const cleaned: Record<string, unknown> | unknown[] = Array.isArray(obj) ? [] : {};
   for (const key in obj) {
     const value = obj[key];
     if (value !== undefined) {
-      cleaned[key] = typeof value === 'object' ? cleanUndefined(value) : value;
+      (cleaned as Record<string, unknown>)[key] = typeof value === 'object' ? cleanUndefined(value) : value;
     }
   }
-  return cleaned;
+  return cleaned as T;
 }
 
 export class AlertService {
@@ -105,7 +99,7 @@ export class AlertService {
 
     // Build dynamic query
     let whereClause = 'WHERE 1=1';
-    const parameters: any[] = [];
+    const parameters: { name: string; value: string | boolean }[] = [];
 
     if (query.type) {
       whereClause += ' AND c.type = @type';
@@ -215,8 +209,7 @@ export class AlertService {
     // Handle status changes and invoice status updates
     if (payload.status && payload.status !== current.status && next.invoiceId) {
       const statusChangedFromPending =
-        current.status === 'Pending' &&
-        ['Acknowledged', 'Overridden', 'Resolved'].includes(payload.status);
+        current.status === 'Pending' && ['Acknowledged', 'Overridden', 'Resolved'].includes(payload.status);
 
       const statusChangedToPending = payload.status === 'Pending' && current.status !== 'Pending';
 
@@ -343,8 +336,7 @@ export class AlertService {
   // Find by invoice ID and status
   async getAlertsByInvoiceIdAndStatus(invoiceId: string, status: AlertStatus): Promise<Alert[]> {
     const q: SqlQuerySpec = {
-      query:
-        'SELECT * FROM c WHERE c.invoiceId = @invoiceId AND c.status = @status ORDER BY c.createdAt DESC',
+      query: 'SELECT * FROM c WHERE c.invoiceId = @invoiceId AND c.status = @status ORDER BY c.createdAt DESC',
       parameters: [
         { name: '@invoiceId', value: invoiceId },
         { name: '@status', value: status },
@@ -375,11 +367,9 @@ export class AlertService {
   }
 
   // Bulk import
-  async bulkImport(
-    alerts: Alert[]
-  ): Promise<{ success: Alert[]; errors: { item: any; error: string }[] }> {
+  async bulkImport(alerts: Alert[]): Promise<{ success: Alert[]; errors: { item: Alert; error: string }[] }> {
     const success: Alert[] = [];
-    const errors: { item: any; error: string }[] = [];
+    const errors: { item: Alert; error: string }[] = [];
 
     for (const item of alerts) {
       try {
@@ -433,10 +423,10 @@ export class AlertService {
         const cleanDoc = cleanUndefined(doc);
         await this.container.items.create(cleanDoc);
         success.push(cleanDoc);
-      } catch (error: any) {
+      } catch (error: unknown) {
         errors.push({
           item,
-          error: error.message || 'Failed to create alert',
+          error: error instanceof Error ? error.message : 'Failed to create alert',
         });
       }
     }
@@ -458,9 +448,7 @@ export class AlertService {
       // If no pending alerts remain, change invoice status back to Draft
       if (pendingAlerts.length === 0) {
         await invoiceService.changeStatusToDraft(invoiceId);
-        console.log(
-          `Changed invoice ${invoiceId} status back to Draft - no pending alerts remaining`
-        );
+        console.log(`Changed invoice ${invoiceId} status back to Draft - no pending alerts remaining`);
       }
     } catch (error) {
       console.error(`Failed to check/change invoice status for invoice ${invoiceId}:`, error);

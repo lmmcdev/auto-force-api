@@ -6,7 +6,6 @@ import {
   getLineItemsContainer,
 } from '../../../infra/cosmos';
 import { Invoice, InvoiceStatus } from '../entities/invoice.entity';
-import { CreateInvoiceDto } from '../dto/create-invoice.dto';
 import { UpdateInvoiceDto } from '../dto/update-invoice.dto';
 import { QueryInvoiceDto } from '../dto/query-invoice.dto';
 
@@ -19,14 +18,14 @@ function cleanUndefined<T>(obj: T): T {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj !== 'object') return obj;
 
-  const cleaned: any = Array.isArray(obj) ? [] : {};
+  const cleaned: Record<string, unknown> | unknown[] = Array.isArray(obj) ? [] : {};
   for (const key in obj) {
     const value = obj[key];
     if (value !== undefined) {
-      cleaned[key] = typeof value === 'object' ? cleanUndefined(value) : value;
+      (cleaned as Record<string, unknown>)[key] = typeof value === 'object' ? cleanUndefined(value) : value;
     }
   }
-  return cleaned;
+  return cleaned as T;
 }
 
 export class InvoiceService {
@@ -123,7 +122,7 @@ export class InvoiceService {
 
     // Build dynamic query
     let whereClause = 'WHERE 1=1';
-    const parameters: any[] = [];
+    const parameters: { name: string; value: string | number }[] = [];
 
     if (query.vehicleId) {
       whereClause += ' AND c.vehicleId = @vehicleId';
@@ -146,8 +145,7 @@ export class InvoiceService {
     }
 
     if (query.q && query.q.trim()) {
-      whereClause +=
-        ' AND (CONTAINS(LOWER(c.invoiceNumber), LOWER(@q)) OR CONTAINS(LOWER(c.description), LOWER(@q)))';
+      whereClause += ' AND (CONTAINS(LOWER(c.invoiceNumber), LOWER(@q)) OR CONTAINS(LOWER(c.description), LOWER(@q)))';
       parameters.push({ name: '@q', value: query.q.trim() });
     }
 
@@ -211,11 +209,7 @@ export class InvoiceService {
     if (!current) throw new Error('invoice not found');
 
     // Validate that invoice with 'PendingAlertReview' status cannot change to other statuses if pending alerts exist
-    if (
-      payload.status &&
-      current.status === 'PendingAlertReview' &&
-      payload.status !== 'PendingAlertReview'
-    ) {
+    if (payload.status && current.status === 'PendingAlertReview' && payload.status !== 'PendingAlertReview') {
       // Import AlertService dynamically to avoid circular dependency
       const { alertService } = await import('../../alert/services/alert.service');
       const alerts = await alertService.getAlertsByInvoiceIdAndStatus(id, 'Pending');
@@ -229,9 +223,7 @@ export class InvoiceService {
 
     // Validate vehicle exists if changing vehicleId
     if (payload.vehicleId && payload.vehicleId !== current.vehicleId) {
-      const vehicle = await this.vehiclesContainer
-        .item(payload.vehicleId, payload.vehicleId)
-        .read();
+      const vehicle = await this.vehiclesContainer.item(payload.vehicleId, payload.vehicleId).read();
       if (!vehicle.resource) {
         throw new Error(`Vehicle with id '${payload.vehicleId}' not found`);
       }
@@ -261,9 +253,7 @@ export class InvoiceService {
       ...current,
       ...payload,
       invoiceAmount:
-        payload.invoiceAmount !== undefined
-          ? Number(payload.invoiceAmount.toFixed(2))
-          : current.invoiceAmount,
+        payload.invoiceAmount !== undefined ? Number(payload.invoiceAmount.toFixed(2)) : current.invoiceAmount,
       tax: payload.tax !== undefined ? Number(payload.tax.toFixed(2)) : current.tax,
       updatedAt: nowIso(),
     };
@@ -334,11 +324,9 @@ export class InvoiceService {
   }
 
   // Bulk import
-  async bulkImport(
-    invoices: Invoice[]
-  ): Promise<{ success: Invoice[]; errors: { item: any; error: string }[] }> {
+  async bulkImport(invoices: Invoice[]): Promise<{ success: Invoice[]; errors: { item: Invoice; error: string }[] }> {
     const success: Invoice[] = [];
-    const errors: { item: any; error: string }[] = [];
+    const errors: { item: Invoice; error: string }[] = [];
 
     for (const item of invoices) {
       try {
@@ -394,10 +382,10 @@ export class InvoiceService {
         const cleanDoc = cleanUndefined(doc);
         await this.container.items.create(cleanDoc);
         success.push(cleanDoc);
-      } catch (error: any) {
+      } catch (error: unknown) {
         errors.push({
           item,
-          error: error.message || 'Failed to create invoice',
+          error: error instanceof Error ? error.message : 'Failed to create invoice',
         });
       }
     }
@@ -413,9 +401,7 @@ export class InvoiceService {
       parameters: [{ name: '@invoiceId', value: id }],
     };
 
-    const { resources: lineItems } = await this.lineItemsContainer.items
-      .query(lineItemsQuery)
-      .fetchAll();
+    const { resources: lineItems } = await this.lineItemsContainer.items.query(lineItemsQuery).fetchAll();
 
     // Update each line item if vehicleId or vendorId was provided
     for (const lineItem of lineItems) {
@@ -453,9 +439,7 @@ export class InvoiceService {
       parameters: [{ name: '@invoiceId', value: id }],
     };
 
-    const { resources: lineItems } = await this.lineItemsContainer.items
-      .query(lineItemsQuery)
-      .fetchAll();
+    const { resources: lineItems } = await this.lineItemsContainer.items.query(lineItemsQuery).fetchAll();
 
     // Calculate subTotal from all line items
     const subTotal = lineItems.reduce((sum, lineItem) => {

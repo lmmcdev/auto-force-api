@@ -1,11 +1,4 @@
-export type AlertType =
-  | 'WARRANTY'
-  | 'LICENSE'
-  | 'PERMIT'
-  | 'HIGHER_PRICE'
-  | 'CERTIFICATION'
-  | 'SAME_SERVICE'
-  | string;
+export type AlertType = 'WARRANTY' | 'LICENSE' | 'PERMIT' | 'HIGHER_PRICE' | 'CERTIFICATION' | 'SAME_SERVICE' | string;
 
 export type AlertCategory = 'ServiceType' | 'DriverLicense' | string;
 

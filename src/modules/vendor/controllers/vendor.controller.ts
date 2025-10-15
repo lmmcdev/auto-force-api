@@ -142,10 +142,7 @@ export class VendorController {
   }
 
   // GET /vendors/by-status-type/{status}/{type}
-  async getByStatusAndType(
-    request: HttpRequest,
-    context: InvocationContext
-  ): Promise<HttpResponseInit> {
+  async getByStatusAndType(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
       const status = request.params.status as VendorStatus;
       const type = request.params.type as VendorType;

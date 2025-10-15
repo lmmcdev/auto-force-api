@@ -37,12 +37,8 @@ export class HealthService {
   }
 
   private async checkDatabaseHealth(): Promise<'healthy' | 'unhealthy'> {
-    try {
-      // Here you would implement actual Cosmos DB health check
-      // For now, we'll simulate a health check
-      return 'healthy';
-    } catch (error) {
-      return 'unhealthy';
-    }
+    // Here you would implement actual Cosmos DB health check
+    // For now, we'll simulate a health check
+    return 'healthy';
   }
 }

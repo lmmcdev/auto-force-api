@@ -134,11 +134,7 @@ export class VendorService {
     // Validar nombre duplicado si cambia
     if (payload.name && payload.name.trim().toLowerCase() !== current.name.toLowerCase()) {
       const dup = await this.find({ q: payload.name, take: 1 });
-      if (
-        dup.data.some(
-          v => v.id !== id && v.name.toLowerCase() === payload.name!.trim().toLowerCase()
-        )
-      ) {
+      if (dup.data.some(v => v.id !== id && v.name.toLowerCase() === payload.name!.trim().toLowerCase())) {
         throw new Error('vendor with same name already exists');
       }
     }
@@ -198,9 +194,7 @@ export class VendorService {
     return resources;
   }
 
-  async bulkImport(
-    vendors: Vendor[]
-  ): Promise<{ success: Vendor[]; errors: { item: Vendor; error: string }[] }> {
+  async bulkImport(vendors: Vendor[]): Promise<{ success: Vendor[]; errors: { item: Vendor; error: string }[] }> {
     const success: Vendor[] = [];
     const errors: { item: Vendor; error: string }[] = [];
 
@@ -225,9 +219,7 @@ export class VendorService {
 
         // Check if vendor with same name already exists
         const existingByName = await this.find({ q: item.name.trim(), take: 1 });
-        if (
-          existingByName.data.some(v => v.name.toLowerCase() === item.name.trim().toLowerCase())
-        ) {
+        if (existingByName.data.some(v => v.name.toLowerCase() === item.name.trim().toLowerCase())) {
           errors.push({ item, error: `vendor with name '${item.name}' already exists` });
           continue;
         }

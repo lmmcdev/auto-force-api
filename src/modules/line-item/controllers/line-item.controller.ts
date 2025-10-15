@@ -1,6 +1,5 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { LineItem, LineItemType } from '../entities/line-item.entity';
-import { CreateLineItemDto } from '../dto/create-line-item.dto';
 import { UpdateLineItemDto } from '../dto/update-line-item.dto';
 import { lineItemService } from '../services/line-item.service';
 import { QueryLineItemDto } from '../dto/query-line-item.dto';
@@ -11,13 +10,10 @@ export class LineItemController {
   // POST /line-items
   async postOne(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
-      const body = (await request.json()) as Omit<
-        LineItem,
-        'id' | 'totalPrice' | 'createdAt' | 'updatedAt'
-      >;
+      const body = (await request.json()) as Omit<LineItem, 'id' | 'totalPrice' | 'createdAt' | 'updatedAt'>;
       const created = await lineItemService.create(body);
       return { status: 201, jsonBody: { message: 'Created', data: created } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('lineItem.postOne error', err);
       return this.toError(err);
     }
@@ -55,7 +51,7 @@ export class LineItemController {
       const status = result.errors.length > 0 ? 207 : 201;
 
       return { status, jsonBody: response };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('lineItem.importList error', err);
       return this.toError(err);
     }
@@ -71,7 +67,7 @@ export class LineItemController {
       if (!found) return { status: 404, jsonBody: { message: 'Not found' } };
 
       return { status: 200, jsonBody: { data: found } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('lineItem.getOne error', err);
       return this.toError(err);
     }
@@ -99,37 +95,25 @@ export class LineItemController {
             : url.searchParams.get('warranty') === 'false'
               ? false
               : undefined,
-        minUnitPrice: url.searchParams.get('minUnitPrice')
-          ? Number(url.searchParams.get('minUnitPrice'))
-          : undefined,
-        maxUnitPrice: url.searchParams.get('maxUnitPrice')
-          ? Number(url.searchParams.get('maxUnitPrice'))
-          : undefined,
-        minQuantity: url.searchParams.get('minQuantity')
-          ? Number(url.searchParams.get('minQuantity'))
-          : undefined,
-        maxQuantity: url.searchParams.get('maxQuantity')
-          ? Number(url.searchParams.get('maxQuantity'))
-          : undefined,
+        minUnitPrice: url.searchParams.get('minUnitPrice') ? Number(url.searchParams.get('minUnitPrice')) : undefined,
+        maxUnitPrice: url.searchParams.get('maxUnitPrice') ? Number(url.searchParams.get('maxUnitPrice')) : undefined,
+        minQuantity: url.searchParams.get('minQuantity') ? Number(url.searchParams.get('minQuantity')) : undefined,
+        maxQuantity: url.searchParams.get('maxQuantity') ? Number(url.searchParams.get('maxQuantity')) : undefined,
         minTotalPrice: url.searchParams.get('minTotalPrice')
           ? Number(url.searchParams.get('minTotalPrice'))
           : undefined,
         maxTotalPrice: url.searchParams.get('maxTotalPrice')
           ? Number(url.searchParams.get('maxTotalPrice'))
           : undefined,
-        minMileage: url.searchParams.get('minMileage')
-          ? Number(url.searchParams.get('minMileage'))
-          : undefined,
-        maxMileage: url.searchParams.get('maxMileage')
-          ? Number(url.searchParams.get('maxMileage'))
-          : undefined,
+        minMileage: url.searchParams.get('minMileage') ? Number(url.searchParams.get('minMileage')) : undefined,
+        maxMileage: url.searchParams.get('maxMileage') ? Number(url.searchParams.get('maxMileage')) : undefined,
         skip: url.searchParams.get('skip') ? Number(url.searchParams.get('skip')) : undefined,
         take: url.searchParams.get('take') ? Number(url.searchParams.get('take')) : undefined,
       };
 
       const { data, total } = await lineItemService.find(query);
       return { status: 200, jsonBody: { data, total } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('lineItem.getMany error', err);
       return this.toError(err);
     }
@@ -144,7 +128,7 @@ export class LineItemController {
       const body = (await request.json()) as UpdateLineItemDto;
       const updated = await lineItemService.update(id, body);
       return { status: 200, jsonBody: { message: 'OK', data: updated } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('lineItem.putOne error', err);
       return this.toError(err);
     }
@@ -158,43 +142,35 @@ export class LineItemController {
 
       await lineItemService.delete(id);
       return { status: 204 };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('lineItem.deleteOne error', err);
       return this.toError(err);
     }
   }
 
   // GET /line-items/by-invoice/{invoiceId}
-  async getByInvoiceId(
-    request: HttpRequest,
-    context: InvocationContext
-  ): Promise<HttpResponseInit> {
+  async getByInvoiceId(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
       const invoiceId = request.params.invoiceId;
-      if (!invoiceId)
-        return { status: 400, jsonBody: { message: 'Invoice ID parameter is required' } };
+      if (!invoiceId) return { status: 400, jsonBody: { message: 'Invoice ID parameter is required' } };
 
       const lineItems = await lineItemService.findByInvoiceId(invoiceId);
       return { status: 200, jsonBody: { data: lineItems } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('lineItem.getByInvoiceId error', err);
       return this.toError(err);
     }
   }
 
   // GET /line-items/by-service-type/{serviceTypeId}
-  async getByServiceTypeId(
-    request: HttpRequest,
-    context: InvocationContext
-  ): Promise<HttpResponseInit> {
+  async getByServiceTypeId(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
       const serviceTypeId = request.params.serviceTypeId;
-      if (!serviceTypeId)
-        return { status: 400, jsonBody: { message: 'Service type ID parameter is required' } };
+      if (!serviceTypeId) return { status: 400, jsonBody: { message: 'Service type ID parameter is required' } };
 
       const lineItems = await lineItemService.findByServiceTypeId(serviceTypeId);
       return { status: 200, jsonBody: { data: lineItems } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('lineItem.getByServiceTypeId error', err);
       return this.toError(err);
     }
@@ -210,7 +186,7 @@ export class LineItemController {
 
       const lineItems = await lineItemService.findByType(type);
       return { status: 200, jsonBody: { data: lineItems } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('lineItem.getByType error', err);
       return this.toError(err);
     }
@@ -230,17 +206,14 @@ export class LineItemController {
       const taxable = taxableParam === 'true';
       const lineItems = await lineItemService.findTaxable(taxable);
       return { status: 200, jsonBody: { data: lineItems } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('lineItem.getTaxable error', err);
       return this.toError(err);
     }
   }
 
   // GET /line-items/warranty/{warranty}
-  async getWithWarranty(
-    request: HttpRequest,
-    context: InvocationContext
-  ): Promise<HttpResponseInit> {
+  async getWithWarranty(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
       const warrantyParam = request.params.warranty;
       if (warrantyParam !== 'true' && warrantyParam !== 'false') {
@@ -253,7 +226,7 @@ export class LineItemController {
       const warranty = warrantyParam === 'true';
       const lineItems = await lineItemService.findWithWarranty(warranty);
       return { status: 200, jsonBody: { data: lineItems } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('lineItem.getWithWarranty error', err);
       return this.toError(err);
     }
@@ -285,13 +258,9 @@ export class LineItemController {
       }
 
       const unitPriceNum = Number(unitPrice);
-      const lineItems = await lineItemService.findByServiceTypeIdAndTypeAndUnitPrice(
-        serviceTypeId,
-        type,
-        unitPriceNum
-      );
+      const lineItems = await lineItemService.findByServiceTypeIdAndTypeAndUnitPrice(serviceTypeId, type, unitPriceNum);
       return { status: 200, jsonBody: { data: lineItems } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('lineItem.getByServiceTypeIdAndTypeAndUnitPrice error', err);
       return this.toError(err);
     }
@@ -325,15 +294,15 @@ export class LineItemController {
         vehicleId
       );
       return { status: 200, jsonBody: { data: lineItems } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('lineItem.getByServiceTypeAndTypeAndVehicleIdWithWarrantyTrue error', err);
       return this.toError(err);
     }
   }
 
   // Mapeo de errores a HTTP
-  private toError(err: any): HttpResponseInit {
-    const msg = String(err?.message ?? 'Internal error');
+  private toError(err: unknown): HttpResponseInit {
+    const msg = err instanceof Error ? err.message : String(err ?? 'Internal error');
     const status = /not found/i.test(msg)
       ? 404
       : /already exists/i.test(msg)
@@ -438,6 +407,5 @@ app.http('GetLineItemsByServiceTypeAndTypeAndVehicleIdWithWarrantyTrue', {
   methods: ['GET'],
   route: `${lineItemsRoute}/warranty-filter/{serviceTypeId}/{type}/{vehicleId}`,
   authLevel: 'function',
-  handler: (req, ctx) =>
-    lineItemController.getByServiceTypeAndTypeAndVehicleIdWithWarrantyTrue(req, ctx),
+  handler: (req, ctx) => lineItemController.getByServiceTypeAndTypeAndVehicleIdWithWarrantyTrue(req, ctx),
 });

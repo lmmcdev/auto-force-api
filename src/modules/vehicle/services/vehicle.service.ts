@@ -127,9 +127,7 @@ export class VehicleService {
     return resources;
   }
 
-  async bulkImport(
-    vehicles: Vehicle[]
-  ): Promise<{ success: Vehicle[]; errors: { item: Vehicle; error: string }[] }> {
+  async bulkImport(vehicles: Vehicle[]): Promise<{ success: Vehicle[]; errors: { item: Vehicle; error: string }[] }> {
     const success: Vehicle[] = [];
     const errors: { item: Vehicle; error: string }[] = [];
 
