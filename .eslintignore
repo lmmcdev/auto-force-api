@@ -1,0 +1,20 @@
+# Build output
+dist
+build
+*.js.map
+
+# Dependencies
+node_modules
+
+# Coverage
+coverage
+
+# Logs
+*.log
+logs
+
+# Azure Functions
+bin
+obj
+*.user
+local.settings.json
