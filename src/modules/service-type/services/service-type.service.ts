@@ -1,7 +1,6 @@
 import { SqlQuerySpec } from '@azure/cosmos';
 import { getServiceTypesContainer } from '../../../infra/cosmos';
 import { ServiceType, ServiceTypeStatus, ServiceTypeType } from '../entities/service-type.entity';
-import { CreateServiceTypeDto } from '../dto/create-service-type.dto';
 import { UpdateServiceTypeDto } from '../dto/update-service-type.dto';
 import { QueryServiceTypeDto } from '../dto/query-service-type.dto';
 
@@ -14,14 +13,15 @@ function cleanUndefined<T>(obj: T): T {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj !== 'object') return obj;
 
-  const cleaned: any = Array.isArray(obj) ? [] : {};
+  const cleaned: Record<string, unknown> | unknown[] = Array.isArray(obj) ? [] : {};
   for (const key in obj) {
     const value = obj[key];
     if (value !== undefined) {
-      cleaned[key] = typeof value === 'object' ? cleanUndefined(value) : value;
+      (cleaned as Record<string, unknown>)[key] =
+        typeof value === 'object' ? cleanUndefined(value) : value;
     }
   }
-  return cleaned;
+  return cleaned as T;
 }
 
 export class ServiceTypeService {
@@ -81,7 +81,7 @@ export class ServiceTypeService {
 
     // Build dynamic query based on provided filters
     let whereClause = 'WHERE 1=1';
-    const parameters: any[] = [];
+    const parameters: { name: string; value: string }[] = [];
 
     if (query.status) {
       whereClause += ' AND c.status = @status';
@@ -211,9 +211,9 @@ export class ServiceTypeService {
 
   async bulkImport(
     serviceTypes: ServiceType[]
-  ): Promise<{ success: ServiceType[]; errors: { item: any; error: string }[] }> {
+  ): Promise<{ success: ServiceType[]; errors: { item: ServiceType; error: string }[] }> {
     const success: ServiceType[] = [];
-    const errors: { item: any; error: string }[] = [];
+    const errors: { item: ServiceType; error: string }[] = [];
 
     for (const item of serviceTypes) {
       try {
@@ -248,10 +248,10 @@ export class ServiceTypeService {
         const cleanDoc = cleanUndefined(doc);
         await this.container.items.create(cleanDoc);
         success.push(cleanDoc);
-      } catch (error: any) {
+      } catch (error: unknown) {
         errors.push({
           item,
-          error: error.message || 'Failed to create service type',
+          error: error instanceof Error ? error.message : 'Failed to create service type',
         });
       }
     }

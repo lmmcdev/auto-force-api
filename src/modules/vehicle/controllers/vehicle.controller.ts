@@ -1,7 +1,5 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { vehicleService, VehicleService } from '../services/vehicle.service';
-import { CreateVehicleDto } from '../dto/create-vehicle.dto';
-import { UpdateVehicleDto } from '../dto/update-vehicle.dto';
+import { vehicleService } from '../services/vehicle.service';
 import { Vehicle } from '../entities/vehicle.entity';
 
 const vehiclesRoute = 'v1/vehicles';
@@ -12,7 +10,7 @@ export class VehicleController {
       const body = (await request.json()) as Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'>;
       const created = await vehicleService.create(body);
       return { status: 201, jsonBody: { message: 'Created', data: created } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('postOne vehicle error', err);
       return this.toError(err);
     }
@@ -48,7 +46,7 @@ export class VehicleController {
       const status = result.errors.length > 0 ? 207 : 201;
 
       return { status, jsonBody: response };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('vehicle.importList error', err);
       return this.toError(err);
     }
@@ -64,7 +62,7 @@ export class VehicleController {
       if (!vehicle) return { status: 404, jsonBody: { message: 'Not found' } };
 
       return { status: 200, jsonBody: { data: vehicle } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('getOne vehicle error', err);
       return this.toError(err);
     }
@@ -101,7 +99,7 @@ export class VehicleController {
       }
 
       return { status: 200, jsonBody: { data, total: data.length } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('getMany vehicle error', err);
       return this.toError(err);
     }
@@ -116,7 +114,7 @@ export class VehicleController {
       const body = (await request.json()) as Partial<Vehicle>;
       const updated = await vehicleService.update(id, body);
       return { status: 200, jsonBody: { message: 'OK', data: updated } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('putOne vehicle error', err);
       return this.toError(err);
     }
@@ -130,7 +128,7 @@ export class VehicleController {
 
       await vehicleService.delete(id);
       return { status: 204 };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('deleteOne vehicle error', err);
       return this.toError(err);
     }
@@ -146,7 +144,7 @@ export class VehicleController {
       if (!vehicle) return { status: 404, jsonBody: { message: 'Vehicle not found' } };
 
       return { status: 200, jsonBody: { data: vehicle } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('vehicle.getByVin error', err);
       return this.toError(err);
     }
@@ -166,7 +164,7 @@ export class VehicleController {
       if (!vehicle) return { status: 404, jsonBody: { message: 'Vehicle not found' } };
 
       return { status: 200, jsonBody: { data: vehicle } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('vehicle.getByTagNumber error', err);
       return this.toError(err);
     }
@@ -185,7 +183,7 @@ export class VehicleController {
 
       const vehicles = await vehicleService.findByStatus(status);
       return { status: 200, jsonBody: { data: vehicles } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('vehicle.getByStatus error', err);
       return this.toError(err);
     }
@@ -210,14 +208,14 @@ export class VehicleController {
 
       const vehicles = await vehicleService.findByMakeAndYear(make, year);
       return { status: 200, jsonBody: { data: vehicles } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('vehicle.getByMakeAndYear error', err);
       return this.toError(err);
     }
   }
 
-  private toError(err: any): HttpResponseInit {
-    const msg = String(err?.message ?? 'Internal error');
+  private toError(err: unknown): HttpResponseInit {
+    const msg = err instanceof Error ? err.message : String(err ?? 'Internal error');
     const status = /not found/i.test(msg)
       ? 404
       : /already exists/i.test(msg)

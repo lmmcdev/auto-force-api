@@ -1,6 +1,5 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { ServiceType, ServiceTypeStatus, ServiceTypeType } from '../entities/service-type.entity';
-import { CreateServiceTypeDto } from '../dto/create-service-type.dto';
 import { UpdateServiceTypeDto } from '../dto/update-service-type.dto';
 import { serviceTypeService } from '../services/service-type.service';
 import { QueryServiceTypeDto } from '../dto/query-service-type.dto';
@@ -14,7 +13,7 @@ export class ServiceTypeController {
       const body = (await request.json()) as Omit<ServiceType, 'id' | 'createdAt' | 'updatedAt'>;
       const created = await serviceTypeService.create(body);
       return { status: 201, jsonBody: { message: 'Created', data: created } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('serviceType.postOne error', err);
       return this.toError(err);
     }
@@ -53,7 +52,7 @@ export class ServiceTypeController {
       const status = result.errors.length > 0 ? 207 : 201;
 
       return { status, jsonBody: response };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('serviceType.importList error', err);
       return this.toError(err);
     }
@@ -69,7 +68,7 @@ export class ServiceTypeController {
       if (!found) return { status: 404, jsonBody: { message: 'Not found' } };
 
       return { status: 200, jsonBody: { data: found } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('serviceType.getOne error', err);
       return this.toError(err);
     }
@@ -90,7 +89,7 @@ export class ServiceTypeController {
 
       const { data, total } = await serviceTypeService.find(query);
       return { status: 200, jsonBody: { data, total } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('serviceType.getMany error', err);
       return this.toError(err);
     }
@@ -105,7 +104,7 @@ export class ServiceTypeController {
       const body = (await request.json()) as UpdateServiceTypeDto;
       const updated = await serviceTypeService.update(id, body);
       return { status: 200, jsonBody: { message: 'OK', data: updated } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('serviceType.putOne error', err);
       return this.toError(err);
     }
@@ -119,7 +118,7 @@ export class ServiceTypeController {
 
       await serviceTypeService.delete(id);
       return { status: 204 };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('serviceType.deleteOne error', err);
       return this.toError(err);
     }
@@ -138,7 +137,7 @@ export class ServiceTypeController {
 
       const serviceTypes = await serviceTypeService.findByStatus(status);
       return { status: 200, jsonBody: { data: serviceTypes } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('serviceType.getByStatus error', err);
       return this.toError(err);
     }
@@ -154,7 +153,7 @@ export class ServiceTypeController {
 
       const serviceTypes = await serviceTypeService.findByType(type);
       return { status: 200, jsonBody: { data: serviceTypes } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('serviceType.getByType error', err);
       return this.toError(err);
     }
@@ -182,15 +181,15 @@ export class ServiceTypeController {
 
       const serviceTypes = await serviceTypeService.findByStatusAndType(status, type);
       return { status: 200, jsonBody: { data: serviceTypes } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('serviceType.getByStatusAndType error', err);
       return this.toError(err);
     }
   }
 
   // Mapeo de errores a HTTP
-  private toError(err: any): HttpResponseInit {
-    const msg = String(err?.message ?? 'Internal error');
+  private toError(err: unknown): HttpResponseInit {
+    const msg = err instanceof Error ? err.message : String(err ?? 'Internal error');
     const status = /not found/i.test(msg)
       ? 404
       : /already exists/i.test(msg)

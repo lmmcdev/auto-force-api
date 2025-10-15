@@ -1,8 +1,8 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { Vendor, VendorEntity, VendorStatus, VendorType } from '../entities/vendor.entity';
-import { CreateVendorDTO } from '../dto/create-vendor.dto';
+import { URL } from 'url';
+import { Vendor, VendorStatus, VendorType } from '../entities/vendor.entity';
 import { UpdateVendorDTO } from '../dto/update-vendor.dto';
-import { vendorService, VendorService } from '../services/vendor.service';
+import { vendorService } from '../services/vendor.service';
 import { QueryVendorDTO } from '../dto/query-vendor.dto';
 
 const vendorsRoute = 'v1/vendors';
@@ -13,7 +13,7 @@ export class VendorController {
       const body = (await request.json()) as Omit<Vendor, 'id' | 'createdAt' | 'updatedAt'>;
       const created = await vendorService.create(body);
       return { status: 201, jsonBody: { message: 'Created', data: created } };
-    } catch (err: any) {
+    } catch (err) {
       context.error('vendor.postOne error', err);
       return this.toError(err);
     }
@@ -49,7 +49,7 @@ export class VendorController {
       const status = result.errors.length > 0 ? 207 : 201;
 
       return { status, jsonBody: response };
-    } catch (err: any) {
+    } catch (err) {
       context.error('vendor.importList error', err);
       return this.toError(err);
     }
@@ -65,7 +65,7 @@ export class VendorController {
       if (!found) return { status: 404, jsonBody: { message: 'Not found' } };
 
       return { status: 200, jsonBody: { data: found } };
-    } catch (err: any) {
+    } catch (err) {
       context.error('vendor.getOne error', err);
       return this.toError(err);
     }
@@ -87,7 +87,7 @@ export class VendorController {
       const { data, total } = await vendorService.find(query);
       //const data =await vendorService.findAll()
       return { status: 200, jsonBody: { data, total } };
-    } catch (err: any) {
+    } catch (err) {
       context.error('vendor.getMany error', err);
       return this.toError(err);
     }
@@ -102,7 +102,7 @@ export class VendorController {
       const body = (await request.json()) as UpdateVendorDTO;
       const updated = await vendorService.update(id, body);
       return { status: 200, jsonBody: { message: 'OK', data: updated } };
-    } catch (err: any) {
+    } catch (err) {
       context.error('vendor.putOne error', err);
       return this.toError(err);
     }
@@ -116,7 +116,7 @@ export class VendorController {
 
       await vendorService.delete(id);
       return { status: 204 };
-    } catch (err: any) {
+    } catch (err) {
       context.error('vendor.deleteOne error', err);
       return this.toError(err);
     }
@@ -135,7 +135,7 @@ export class VendorController {
 
       const vendors = await vendorService.findByStatus(status);
       return { status: 200, jsonBody: { data: vendors } };
-    } catch (err: any) {
+    } catch (err) {
       context.error('vendor.getByStatus error', err);
       return this.toError(err);
     }
@@ -163,15 +163,20 @@ export class VendorController {
 
       const vendors = await vendorService.findByStatusAndType(status, type);
       return { status: 200, jsonBody: { data: vendors } };
-    } catch (err: any) {
+    } catch (err) {
       context.error('vendor.getByStatusAndType error', err);
       return this.toError(err);
     }
   }
 
   // Mapeo de errores a HTTP
-  private toError(err: any): HttpResponseInit {
-    const msg = String(err?.message ?? 'Internal error');
+  private toError(err: unknown): HttpResponseInit {
+    const msg =
+      err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err !== null && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Internal error';
     const status = /not found/i.test(msg)
       ? 404
       : /already exists/i.test(msg)

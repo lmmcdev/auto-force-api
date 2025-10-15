@@ -1,7 +1,6 @@
 import { SqlQuerySpec } from '@azure/cosmos';
 import { getVendorsContainer } from '../../../infra/cosmos';
-import { Vendor, VendorEntity, VendorStatus, VendorType } from '../entities/vendor.entity';
-import { CreateVendorDTO } from '../dto/create-vendor.dto';
+import { Vendor, VendorStatus, VendorType } from '../entities/vendor.entity';
 import { UpdateVendorDTO } from '../dto/update-vendor.dto';
 import { QueryVendorDTO } from '../dto/query-vendor.dto';
 
@@ -14,14 +13,18 @@ function cleanUndefined<T>(obj: T): T {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj !== 'object') return obj;
 
-  const cleaned: any = Array.isArray(obj) ? [] : {};
+  const cleaned: Record<string, unknown> | unknown[] = Array.isArray(obj) ? [] : {};
   for (const key in obj) {
     const value = obj[key];
     if (value !== undefined) {
-      cleaned[key] = typeof value === 'object' ? cleanUndefined(value) : value;
+      if (Array.isArray(cleaned)) {
+        cleaned.push(typeof value === 'object' ? cleanUndefined(value) : value);
+      } else {
+        cleaned[key] = typeof value === 'object' ? cleanUndefined(value) : value;
+      }
     }
   }
-  return cleaned;
+  return cleaned as T;
 }
 
 export class VendorService {
@@ -82,7 +85,7 @@ export class VendorService {
 
     // Build dynamic query based on provided filters
     let whereClause = 'WHERE 1=1';
-    const parameters: any[] = [];
+    const parameters: Array<{ name: string; value: string }> = [];
 
     if (query.status) {
       whereClause += ' AND c.status = @status';
@@ -197,9 +200,9 @@ export class VendorService {
 
   async bulkImport(
     vendors: Vendor[]
-  ): Promise<{ success: Vendor[]; errors: { item: any; error: string }[] }> {
+  ): Promise<{ success: Vendor[]; errors: { item: Vendor; error: string }[] }> {
     const success: Vendor[] = [];
-    const errors: { item: any; error: string }[] = [];
+    const errors: { item: Vendor; error: string }[] = [];
 
     for (const item of vendors) {
       try {
@@ -245,10 +248,10 @@ export class VendorService {
         const cleanDoc = cleanUndefined(doc);
         await this.container.items.create(cleanDoc);
         success.push(cleanDoc);
-      } catch (error: any) {
+      } catch (error) {
         errors.push({
           item,
-          error: error.message || 'Failed to create vendor',
+          error: error instanceof Error ? error.message : 'Failed to create vendor',
         });
       }
     }

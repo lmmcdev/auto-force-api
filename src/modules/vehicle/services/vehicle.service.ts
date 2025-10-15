@@ -1,8 +1,6 @@
 import { SqlQuerySpec } from '@azure/cosmos';
-import { getVehiclesContainer, getVendorsContainer } from '../../../infra/cosmos';
-import { Vehicle, VehicleEntity } from '../entities/vehicle.entity';
-import { CreateVehicleDto } from '../dto/create-vehicle.dto';
-import { UpdateVehicleDto } from '../dto/update-vehicle.dto';
+import { getVehiclesContainer } from '../../../infra/cosmos';
+import { Vehicle } from '../entities/vehicle.entity';
 
 function nowIso() {
   return new Date().toISOString();
@@ -131,9 +129,9 @@ export class VehicleService {
 
   async bulkImport(
     vehicles: Vehicle[]
-  ): Promise<{ success: Vehicle[]; errors: { item: any; error: string }[] }> {
+  ): Promise<{ success: Vehicle[]; errors: { item: Vehicle; error: string }[] }> {
     const success: Vehicle[] = [];
-    const errors: { item: any; error: string }[] = [];
+    const errors: { item: Vehicle; error: string }[] = [];
 
     for (const item of vehicles) {
       try {
@@ -184,10 +182,10 @@ export class VehicleService {
 
         await this.container.items.create(doc);
         success.push(doc);
-      } catch (error: any) {
+      } catch (error) {
         errors.push({
           item,
-          error: error.message || 'Failed to create vehicle',
+          error: error instanceof Error ? error.message : 'Failed to create vehicle',
         });
       }
     }

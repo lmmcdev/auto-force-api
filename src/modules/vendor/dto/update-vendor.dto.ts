@@ -1,10 +1,4 @@
-import {
-  Vendor,
-  VendorAddress,
-  VendorContact,
-  VendorStatus,
-  VendorType,
-} from '../entities/vendor.entity';
+import { VendorAddress, VendorContact, VendorStatus, VendorType } from '../entities/vendor.entity';
 export interface UpdateVendorDTO {
   name?: string;
   status?: VendorStatus;
