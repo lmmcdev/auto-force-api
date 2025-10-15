@@ -35,8 +35,8 @@ export async function initCosmos(): Promise<void> {
     partitionKey: { paths: ['/id'] },
     uniqueKeyPolicy: {
       // opcional: prevenir nombres duplicados
-      uniqueKeys: [{ paths: ['/name'] }]
-    }
+      uniqueKeys: [{ paths: ['/name'] }],
+    },
   });
   vendorsContainer = vCont;
 
@@ -55,8 +55,8 @@ export async function initCosmos(): Promise<void> {
     partitionKey: { paths: ['/id'] },
     uniqueKeyPolicy: {
       // Prevent duplicate names
-      uniqueKeys: [{ paths: ['/name'] }]
-    }
+      uniqueKeys: [{ paths: ['/name'] }],
+    },
   });
   serviceTypesContainer = stCont;
 
@@ -66,22 +66,22 @@ export async function initCosmos(): Promise<void> {
     partitionKey: { paths: ['/id'] },
     uniqueKeyPolicy: {
       // Prevent duplicate invoice numbers
-      uniqueKeys: [{ paths: ['/invoiceNumber'] }]
-    }
+      uniqueKeys: [{ paths: ['/invoiceNumber'] }],
+    },
   });
   invoicesContainer = invCont;
 
   // line-items
   const { container: liCont } = await database.containers.createIfNotExists({
     id: lineItemsContainerName,
-    partitionKey: { paths: ['/id'] }
+    partitionKey: { paths: ['/id'] },
   });
   lineItemsContainer = liCont;
 
   // alerts
   const { container: alertCont } = await database.containers.createIfNotExists({
     id: alertsContainerName,
-    partitionKey: { paths: ['/id'] }
+    partitionKey: { paths: ['/id'] },
   });
   alertsContainer = alertCont;
 }

@@ -1,12 +1,7 @@
-import {
-  app,
-  HttpRequest,
-  HttpResponseInit,
-  InvocationContext,
-} from "@azure/functions";
-import { HealthService } from "../services/health.service";
-import { HealthResponseDto } from "../dto/health-response.dto";
-const healthRoute = "v1/health";
+import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import { HealthService } from '../services/health.service';
+import { HealthResponseDto } from '../dto/health-response.dto';
+const healthRoute = 'v1/health';
 export class HealthController {
   private readonly healthService: HealthService;
 
@@ -23,23 +18,21 @@ export class HealthController {
   }
 
   async getLiveness(): Promise<{ status: string }> {
-    return { status: "alive" };
+    return { status: 'alive' };
   }
 
   async getReadiness(): Promise<{ status: string; ready: boolean }> {
     try {
       const healthStatus = await this.healthService.getHealthStatus();
-      const ready =
-        healthStatus.services.database === "healthy" &&
-        healthStatus.services.api === "healthy";
+      const ready = healthStatus.services.database === 'healthy' && healthStatus.services.api === 'healthy';
 
       return {
-        status: ready ? "ready" : "not ready",
+        status: ready ? 'ready' : 'not ready',
         ready,
       };
-    } catch (error) {
+    } catch {
       return {
-        status: "not ready",
+        status: 'not ready',
         ready: false,
       };
     }
@@ -48,52 +41,46 @@ export class HealthController {
 
 const healthController = new HealthController();
 
-export async function healthCheck(
-  request: HttpRequest,
-  context: InvocationContext
-): Promise<HttpResponseInit> {
+export async function healthCheck(_request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> {
   try {
     const healthStatus = await healthController.getHealthCheck();
     return {
       status: 200,
       jsonBody: healthStatus,
     };
-  } catch (error) {
+  } catch {
     return {
       status: 500,
-      jsonBody: { error: "Health check failed" },
+      jsonBody: { error: 'Health check failed' },
     };
   }
 }
 
-export async function health(
-  request: HttpRequest,
-  context: InvocationContext
-): Promise<HttpResponseInit> {
+export async function health(_request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> {
   try {
     const healthStatus = await healthController.getHealth();
     return {
       status: 200,
       jsonBody: healthStatus,
     };
-  } catch (error) {
+  } catch {
     return {
       status: 500,
-      jsonBody: { error: "Health check failed" },
+      jsonBody: { error: 'Health check failed' },
     };
   }
 }
 
-app.http("healthCheck", {
-  methods: ["GET"],
-  authLevel: "anonymous",
+app.http('healthCheck', {
+  methods: ['GET'],
+  authLevel: 'anonymous',
   route: healthRoute,
   handler: healthCheck,
 });
 
-app.http("health", {
-  methods: ["GET"],
-  authLevel: "anonymous",
+app.http('health', {
+  methods: ['GET'],
+  authLevel: 'anonymous',
   route: `${healthRoute}/status`,
   handler: health,
 });

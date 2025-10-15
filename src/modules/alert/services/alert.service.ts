@@ -6,25 +6,26 @@ import { UpdateAlertDto } from '../dto/update-alert.dto';
 import { QueryAlertDto } from '../dto/query-alert.dto';
 import { invoiceService } from '../../invoice/services/invoice.service';
 
-function nowIso() { return new Date().toISOString(); }
+function nowIso() {
+  return new Date().toISOString();
+}
 
 // Helper para remover campos undefined (Cosmos no acepta undefined, solo null)
 function cleanUndefined<T>(obj: T): T {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj !== 'object') return obj;
 
-  const cleaned: any = Array.isArray(obj) ? [] : {};
+  const cleaned: Record<string, unknown> | unknown[] = Array.isArray(obj) ? [] : {};
   for (const key in obj) {
     const value = obj[key];
     if (value !== undefined) {
-      cleaned[key] = typeof value === 'object' ? cleanUndefined(value) : value;
+      (cleaned as Record<string, unknown>)[key] = typeof value === 'object' ? cleanUndefined(value) : value;
     }
   }
-  return cleaned;
+  return cleaned as T;
 }
 
 export class AlertService {
-
   private get container() {
     return getAlertsContainer();
   }
@@ -62,7 +63,9 @@ export class AlertService {
         const currentStatus = await invoiceService.getStatusById(cleanDoc.invoiceId);
         if (currentStatus === 'Draft') {
           await invoiceService.changeStatusToPendingAlertReview(cleanDoc.invoiceId);
-          console.log(`Changed invoice ${cleanDoc.invoiceId} status from Draft to PendingAlertReview due to alert creation`);
+          console.log(
+            `Changed invoice ${cleanDoc.invoiceId} status from Draft to PendingAlertReview due to alert creation`
+          );
         }
       } catch (error) {
         console.error(`Failed to change invoice status for invoice ${cleanDoc.invoiceId}:`, error);
@@ -84,7 +87,7 @@ export class AlertService {
 
   async findAll(): Promise<Alert[]> {
     const query: SqlQuerySpec = {
-      query: `SELECT * FROM c ORDER BY c.createdAt DESC`
+      query: `SELECT * FROM c ORDER BY c.createdAt DESC`,
     };
     const { resources } = await this.container.items.query(query).fetchAll();
     return resources;
@@ -96,7 +99,7 @@ export class AlertService {
 
     // Build dynamic query
     let whereClause = 'WHERE 1=1';
-    const parameters: any[] = [];
+    const parameters: { name: string; value: string | boolean }[] = [];
 
     if (query.type) {
       whereClause += ' AND c.type = @type';
@@ -168,7 +171,7 @@ export class AlertService {
 
     const q: SqlQuerySpec = {
       query: `SELECT * FROM c ${whereClause} ORDER BY c.createdAt DESC`,
-      parameters: parameters
+      parameters: parameters,
     };
 
     try {
@@ -181,7 +184,7 @@ export class AlertService {
       console.error('Cosmos DB query error:', error);
       // Fallback to simple query
       const fallbackQuery: SqlQuerySpec = {
-        query: 'SELECT * FROM c ORDER BY c.createdAt DESC'
+        query: 'SELECT * FROM c ORDER BY c.createdAt DESC',
       };
       const { resources } = await this.container.items.query<Alert>(fallbackQuery).fetchAll();
       const total = resources.length;
@@ -198,15 +201,15 @@ export class AlertService {
     const next: Alert = {
       ...current,
       ...payload,
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     };
 
     await this.container.item(id, id).replace(next);
 
     // Handle status changes and invoice status updates
     if (payload.status && payload.status !== current.status && next.invoiceId) {
-      const statusChangedFromPending = current.status === 'Pending' &&
-                                      ['Acknowledged', 'Overridden', 'Resolved'].includes(payload.status);
+      const statusChangedFromPending =
+        current.status === 'Pending' && ['Acknowledged', 'Overridden', 'Resolved'].includes(payload.status);
 
       const statusChangedToPending = payload.status === 'Pending' && current.status !== 'Pending';
 
@@ -217,7 +220,9 @@ export class AlertService {
         // Change invoice status to PendingAlertReview
         try {
           await invoiceService.changeStatusToPendingAlertReview(next.invoiceId);
-          console.log(`Changed invoice ${next.invoiceId} status to PendingAlertReview due to alert status change to Pending`);
+          console.log(
+            `Changed invoice ${next.invoiceId} status to PendingAlertReview due to alert status change to Pending`
+          );
         } catch (error) {
           console.error(`Failed to change invoice status for invoice ${next.invoiceId}:`, error);
           // Don't throw error - alert was updated successfully
@@ -243,7 +248,7 @@ export class AlertService {
   async findByType(type: AlertType): Promise<Alert[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.type = @type ORDER BY c.createdAt DESC',
-      parameters: [{ name: '@type', value: type }]
+      parameters: [{ name: '@type', value: type }],
     };
     const { resources } = await this.container.items.query<Alert>(q).fetchAll();
     return resources;
@@ -253,7 +258,7 @@ export class AlertService {
   async findByCategory(category: AlertCategory): Promise<Alert[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.category = @category ORDER BY c.createdAt DESC',
-      parameters: [{ name: '@category', value: category }]
+      parameters: [{ name: '@category', value: category }],
     };
     const { resources } = await this.container.items.query<Alert>(q).fetchAll();
     return resources;
@@ -263,7 +268,7 @@ export class AlertService {
   async findByVehicleId(vehicleId: string): Promise<Alert[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.vehicleId = @vehicleId ORDER BY c.createdAt DESC',
-      parameters: [{ name: '@vehicleId', value: vehicleId }]
+      parameters: [{ name: '@vehicleId', value: vehicleId }],
     };
     const { resources } = await this.container.items.query<Alert>(q).fetchAll();
     return resources;
@@ -273,7 +278,7 @@ export class AlertService {
   async findByServiceTypeId(serviceTypeId: string): Promise<Alert[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId ORDER BY c.createdAt DESC',
-      parameters: [{ name: '@serviceTypeId', value: serviceTypeId }]
+      parameters: [{ name: '@serviceTypeId', value: serviceTypeId }],
     };
     const { resources } = await this.container.items.query<Alert>(q).fetchAll();
     return resources;
@@ -283,21 +288,26 @@ export class AlertService {
   async findByStatus(status: AlertStatus): Promise<Alert[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.status = @status ORDER BY c.createdAt DESC',
-      parameters: [{ name: '@status', value: status }]
+      parameters: [{ name: '@status', value: status }],
     };
     const { resources } = await this.container.items.query<Alert>(q).fetchAll();
     return resources;
   }
 
   // Find by service type ID, vehicle ID, and status (custom endpoint as requested)
-  async findByServiceTypeAndVehicleAndStatus(serviceTypeId: string, vehicleId: string, status: AlertStatus): Promise<Alert[]> {
+  async findByServiceTypeAndVehicleAndStatus(
+    serviceTypeId: string,
+    vehicleId: string,
+    status: AlertStatus
+  ): Promise<Alert[]> {
     const q: SqlQuerySpec = {
-      query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.vehicleId = @vehicleId AND c.status = @status ORDER BY c.createdAt DESC',
+      query:
+        'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.vehicleId = @vehicleId AND c.status = @status ORDER BY c.createdAt DESC',
       parameters: [
         { name: '@serviceTypeId', value: serviceTypeId },
         { name: '@vehicleId', value: vehicleId },
-        { name: '@status', value: status }
-      ]
+        { name: '@status', value: status },
+      ],
     };
     const { resources } = await this.container.items.query<Alert>(q).fetchAll();
     return resources;
@@ -307,7 +317,7 @@ export class AlertService {
   async findByLineItemId(lineItemId: string): Promise<Alert[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.lineItemId = @lineItemId ORDER BY c.createdAt DESC',
-      parameters: [{ name: '@lineItemId', value: lineItemId }]
+      parameters: [{ name: '@lineItemId', value: lineItemId }],
     };
     const { resources } = await this.container.items.query<Alert>(q).fetchAll();
     return resources;
@@ -317,7 +327,7 @@ export class AlertService {
   async findByInvoiceId(invoiceId: string): Promise<Alert[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.invoiceId = @invoiceId ORDER BY c.createdAt DESC',
-      parameters: [{ name: '@invoiceId', value: invoiceId }]
+      parameters: [{ name: '@invoiceId', value: invoiceId }],
     };
     const { resources } = await this.container.items.query<Alert>(q).fetchAll();
     return resources;
@@ -329,8 +339,8 @@ export class AlertService {
       query: 'SELECT * FROM c WHERE c.invoiceId = @invoiceId AND c.status = @status ORDER BY c.createdAt DESC',
       parameters: [
         { name: '@invoiceId', value: invoiceId },
-        { name: '@status', value: status }
-      ]
+        { name: '@status', value: status },
+      ],
     };
     const { resources } = await this.container.items.query<Alert>(q).fetchAll();
     return resources;
@@ -340,7 +350,7 @@ export class AlertService {
   async findByReasons(reasons: AlertReasons): Promise<Alert[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.reasons = @reasons ORDER BY c.createdAt DESC',
-      parameters: [{ name: '@reasons', value: reasons }]
+      parameters: [{ name: '@reasons', value: reasons }],
     };
     const { resources } = await this.container.items.query<Alert>(q).fetchAll();
     return resources;
@@ -350,16 +360,16 @@ export class AlertService {
   async findByValidLineItem(validLineItem: string): Promise<Alert[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.validLineItem = @validLineItem ORDER BY c.createdAt DESC',
-      parameters: [{ name: '@validLineItem', value: validLineItem }]
+      parameters: [{ name: '@validLineItem', value: validLineItem }],
     };
     const { resources } = await this.container.items.query<Alert>(q).fetchAll();
     return resources;
   }
 
   // Bulk import
-  async bulkImport(alerts: Alert[]): Promise<{ success: Alert[]; errors: { item: any; error: string }[] }> {
+  async bulkImport(alerts: Alert[]): Promise<{ success: Alert[]; errors: { item: Alert; error: string }[] }> {
     const success: Alert[] = [];
-    const errors: { item: any; error: string }[] = [];
+    const errors: { item: Alert; error: string }[] = [];
 
     for (const item of alerts) {
       try {
@@ -413,10 +423,10 @@ export class AlertService {
         const cleanDoc = cleanUndefined(doc);
         await this.container.items.create(cleanDoc);
         success.push(cleanDoc);
-      } catch (error: any) {
+      } catch (error: unknown) {
         errors.push({
           item,
-          error: error.message || 'Failed to create alert'
+          error: error instanceof Error ? error.message : 'Failed to create alert',
         });
       }
     }

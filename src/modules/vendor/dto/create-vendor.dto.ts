@@ -1,8 +1,8 @@
-import { Vendor,VendorAddress,VendorContact,VendorStatus,VendorType } from "../entities/vendor.entity";
+import { VendorAddress, VendorContact, VendorStatus, VendorType } from '../entities/vendor.entity';
 
-export interface CreateVendorDTO{
+export interface CreateVendorDTO {
   name: string;
-  status: VendorStatus;          // 'Active' | 'Inactive'
+  status: VendorStatus; // 'Active' | 'Inactive'
   type?: VendorType | null;
   contact?: VendorContact | null;
   address?: VendorAddress | null;

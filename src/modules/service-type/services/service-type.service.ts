@@ -1,40 +1,40 @@
 import { SqlQuerySpec } from '@azure/cosmos';
 import { getServiceTypesContainer } from '../../../infra/cosmos';
 import { ServiceType, ServiceTypeStatus, ServiceTypeType } from '../entities/service-type.entity';
-import { CreateServiceTypeDto } from '../dto/create-service-type.dto';
 import { UpdateServiceTypeDto } from '../dto/update-service-type.dto';
 import { QueryServiceTypeDto } from '../dto/query-service-type.dto';
 
-function nowIso() { return new Date().toISOString(); }
+function nowIso() {
+  return new Date().toISOString();
+}
 
 // Helper para remover campos undefined (Cosmos no acepta undefined, solo null)
 function cleanUndefined<T>(obj: T): T {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj !== 'object') return obj;
 
-  const cleaned: any = Array.isArray(obj) ? [] : {};
+  const cleaned: Record<string, unknown> | unknown[] = Array.isArray(obj) ? [] : {};
   for (const key in obj) {
     const value = obj[key];
     if (value !== undefined) {
-      cleaned[key] = typeof value === 'object' ? cleanUndefined(value) : value;
+      (cleaned as Record<string, unknown>)[key] = typeof value === 'object' ? cleanUndefined(value) : value;
     }
   }
-  return cleaned;
+  return cleaned as T;
 }
 
 export class ServiceTypeService {
-
   private get container() {
     return getServiceTypesContainer();
   }
 
-  async create(payload: Omit<ServiceType, "id" | "createdAt" | "updatedAt">): Promise<ServiceType> {
+  async create(payload: Omit<ServiceType, 'id' | 'createdAt' | 'updatedAt'>): Promise<ServiceType> {
     if (!payload.name?.trim()) throw new Error('name is required');
 
     // chequear duplicado por nombre (si aplicaste uniqueKeyPolicy, Cosmos ya lo protege)
     const query: SqlQuerySpec = {
       query: 'SELECT TOP 1 * FROM c WHERE LOWER(c.name) = LOWER(@name)',
-      parameters: [{ name: '@name', value: payload.name }]
+      parameters: [{ name: '@name', value: payload.name }],
     };
     const { resources } = await this.container.items.query<ServiceType>(query).fetchAll();
     if (resources.length > 0) {
@@ -68,7 +68,7 @@ export class ServiceTypeService {
 
   async findAll(): Promise<ServiceType[]> {
     const query: SqlQuerySpec = {
-      query: `SELECT * FROM c ORDER BY c.name`
+      query: `SELECT * FROM c ORDER BY c.name`,
     };
     const { resources } = await this.container.items.query(query).fetchAll();
     return resources;
@@ -80,7 +80,7 @@ export class ServiceTypeService {
 
     // Build dynamic query based on provided filters
     let whereClause = 'WHERE 1=1';
-    const parameters: any[] = [];
+    const parameters: { name: string; value: string }[] = [];
 
     if (query.status) {
       whereClause += ' AND c.status = @status';
@@ -99,7 +99,7 @@ export class ServiceTypeService {
 
     const q: SqlQuerySpec = {
       query: `SELECT * FROM c ${whereClause} ORDER BY c.name`,
-      parameters: parameters
+      parameters: parameters,
     };
 
     try {
@@ -112,7 +112,7 @@ export class ServiceTypeService {
       console.error('Cosmos DB query error:', error);
       // Fallback to simple query without filters
       const fallbackQuery: SqlQuerySpec = {
-        query: 'SELECT * FROM c ORDER BY c.name'
+        query: 'SELECT * FROM c ORDER BY c.name',
       };
       const { resources } = await this.container.items.query<ServiceType>(fallbackQuery).fetchAll();
       const total = resources.length;
@@ -138,7 +138,7 @@ export class ServiceTypeService {
       ...current,
       ...payload,
       name: payload.name ? payload.name.trim() : current.name,
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     };
 
     await this.container.item(id, id).replace(next);
@@ -160,7 +160,7 @@ export class ServiceTypeService {
         WHERE c.status = @status
         ORDER BY c.name
       `,
-      parameters: [{ name: "@status", value: status }],
+      parameters: [{ name: '@status', value: status }],
     };
 
     const { resources } = await this.container.items.query<ServiceType>(q).fetchAll();
@@ -175,7 +175,7 @@ export class ServiceTypeService {
         WHERE c.type = @type
         ORDER BY c.name
       `,
-      parameters: [{ name: "@type", value: type }],
+      parameters: [{ name: '@type', value: type }],
     };
 
     const { resources } = await this.container.items.query<ServiceType>(q).fetchAll();
@@ -191,8 +191,8 @@ export class ServiceTypeService {
         ORDER BY c.name
       `,
       parameters: [
-        { name: "@status", value: status },
-        { name: "@type", value: type },
+        { name: '@status', value: status },
+        { name: '@type', value: type },
       ],
     };
 
@@ -200,9 +200,11 @@ export class ServiceTypeService {
     return resources;
   }
 
-  async bulkImport(serviceTypes: ServiceType[]): Promise<{ success: ServiceType[]; errors: { item: any; error: string }[] }> {
+  async bulkImport(
+    serviceTypes: ServiceType[]
+  ): Promise<{ success: ServiceType[]; errors: { item: ServiceType; error: string }[] }> {
     const success: ServiceType[] = [];
-    const errors: { item: any; error: string }[] = [];
+    const errors: { item: ServiceType; error: string }[] = [];
 
     for (const item of serviceTypes) {
       try {
@@ -237,10 +239,10 @@ export class ServiceTypeService {
         const cleanDoc = cleanUndefined(doc);
         await this.container.items.create(cleanDoc);
         success.push(cleanDoc);
-      } catch (error: any) {
+      } catch (error: unknown) {
         errors.push({
           item,
-          error: error.message || 'Failed to create service type'
+          error: error instanceof Error ? error.message : 'Failed to create service type',
         });
       }
     }

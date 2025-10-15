@@ -65,6 +65,5 @@ export class VehicleEntity implements Vehicle {
     this.make = vehicle.make || '';
     this.color = vehicle.color || '';
     this.year = vehicle.year || new Date().getFullYear();
-    
   }
 }

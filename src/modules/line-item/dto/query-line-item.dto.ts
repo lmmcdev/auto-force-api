@@ -1,7 +1,7 @@
 import { LineItemType } from '../entities/line-item.entity';
 
 export interface QueryLineItemDto {
-  q?: string;              // Search term for description
+  q?: string; // Search term for description
   serviceTypeId?: string;
   invoiceId?: string;
   type?: LineItemType;

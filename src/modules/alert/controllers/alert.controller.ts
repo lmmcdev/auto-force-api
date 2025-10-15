@@ -1,4 +1,4 @@
-import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
+import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { alertService } from '../services/alert.service';
 import { CreateAlertDto } from '../dto/create-alert.dto';
 import { UpdateAlertDto } from '../dto/update-alert.dto';
@@ -29,14 +29,19 @@ export async function getAlerts(request: HttpRequest, context: InvocationContext
       status: url.searchParams.get('status') || undefined,
       createdFrom: url.searchParams.get('createdFrom') || undefined,
       createdTo: url.searchParams.get('createdTo') || undefined,
-      hasResolution: url.searchParams.get('hasResolution') ? url.searchParams.get('hasResolution') === 'true' : undefined,
+      hasResolution: url.searchParams.get('hasResolution')
+        ? url.searchParams.get('hasResolution') === 'true'
+        : undefined,
     };
 
     const { data, total } = await alertService.find(queryParams);
     return { status: 200, jsonBody: { data, total } };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in getAlerts:', error);
-    return { status: 500, jsonBody: { error: error.message || 'Internal server error' } };
+    return {
+      status: 500,
+      jsonBody: { error: error instanceof Error ? error.message : 'Internal server error' },
+    };
   }
 }
 
@@ -54,21 +59,27 @@ export async function getAlert(request: HttpRequest, context: InvocationContext)
     }
 
     return { status: 200, jsonBody: alert };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in getAlert:', error);
-    return { status: 500, jsonBody: { error: error.message || 'Internal server error' } };
+    return {
+      status: 500,
+      jsonBody: { error: error instanceof Error ? error.message : 'Internal server error' },
+    };
   }
 }
 
 // POST /v1/alerts
 export async function createAlert(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   try {
-    const body = await request.json() as CreateAlertDto;
+    const body = (await request.json()) as CreateAlertDto;
     const alert = await alertService.create(body);
     return { status: 201, jsonBody: alert };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in createAlert:', error);
-    return { status: 400, jsonBody: { error: error.message || 'Bad request' } };
+    return {
+      status: 400,
+      jsonBody: { error: error instanceof Error ? error.message : 'Bad request' },
+    };
   }
 }
 
@@ -80,15 +91,19 @@ export async function updateAlert(request: HttpRequest, context: InvocationConte
       return { status: 400, jsonBody: { error: 'Alert ID is required' } };
     }
 
-    const body = await request.json() as UpdateAlertDto;
+    const body = (await request.json()) as UpdateAlertDto;
     const alert = await alertService.update(id, body);
     return { status: 200, jsonBody: alert };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in updateAlert:', error);
-    if (error.message === 'alert not found') {
-      return { status: 404, jsonBody: { error: error.message } };
+    const errorMessage = error instanceof Error ? error.message : 'Bad request';
+    if (errorMessage === 'alert not found') {
+      return { status: 404, jsonBody: { error: errorMessage } };
     }
-    return { status: 400, jsonBody: { error: error.message || 'Bad request' } };
+    return {
+      status: 400,
+      jsonBody: { error: errorMessage },
+    };
   }
 }
 
@@ -102,12 +117,16 @@ export async function deleteAlert(request: HttpRequest, context: InvocationConte
 
     await alertService.delete(id);
     return { status: 204 };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in deleteAlert:', error);
-    if (error.message === 'alert not found') {
-      return { status: 404, jsonBody: { error: error.message } };
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    if (errorMessage === 'alert not found') {
+      return { status: 404, jsonBody: { error: errorMessage } };
     }
-    return { status: 500, jsonBody: { error: error.message || 'Internal server error' } };
+    return {
+      status: 500,
+      jsonBody: { error: errorMessage },
+    };
   }
 }
 
@@ -121,9 +140,12 @@ export async function getAlertsByType(request: HttpRequest, context: InvocationC
 
     const alerts = await alertService.findByType(type);
     return { status: 200, jsonBody: alerts };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in getAlertsByType:', error);
-    return { status: 500, jsonBody: { error: error.message || 'Internal server error' } };
+    return {
+      status: 500,
+      jsonBody: { error: error instanceof Error ? error.message : 'Internal server error' },
+    };
   }
 }
 
@@ -137,9 +159,12 @@ export async function getAlertsByCategory(request: HttpRequest, context: Invocat
 
     const alerts = await alertService.findByCategory(category);
     return { status: 200, jsonBody: alerts };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in getAlertsByCategory:', error);
-    return { status: 500, jsonBody: { error: error.message || 'Internal server error' } };
+    return {
+      status: 500,
+      jsonBody: { error: error instanceof Error ? error.message : 'Internal server error' },
+    };
   }
 }
 
@@ -153,14 +178,20 @@ export async function getAlertsByVehicle(request: HttpRequest, context: Invocati
 
     const alerts = await alertService.findByVehicleId(vehicleId);
     return { status: 200, jsonBody: alerts };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in getAlertsByVehicle:', error);
-    return { status: 500, jsonBody: { error: error.message || 'Internal server error' } };
+    return {
+      status: 500,
+      jsonBody: { error: error instanceof Error ? error.message : 'Internal server error' },
+    };
   }
 }
 
 // GET /v1/alerts/by-service-type/{serviceTypeId}
-export async function getAlertsByServiceType(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+export async function getAlertsByServiceType(
+  request: HttpRequest,
+  context: InvocationContext
+): Promise<HttpResponseInit> {
   try {
     const serviceTypeId = request.params.serviceTypeId;
     if (!serviceTypeId) {
@@ -169,9 +200,12 @@ export async function getAlertsByServiceType(request: HttpRequest, context: Invo
 
     const alerts = await alertService.findByServiceTypeId(serviceTypeId);
     return { status: 200, jsonBody: alerts };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in getAlertsByServiceType:', error);
-    return { status: 500, jsonBody: { error: error.message || 'Internal server error' } };
+    return {
+      status: 500,
+      jsonBody: { error: error instanceof Error ? error.message : 'Internal server error' },
+    };
   }
 }
 
@@ -185,28 +219,40 @@ export async function getAlertsByStatus(request: HttpRequest, context: Invocatio
 
     const alerts = await alertService.findByStatus(status);
     return { status: 200, jsonBody: alerts };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in getAlertsByStatus:', error);
-    return { status: 500, jsonBody: { error: error.message || 'Internal server error' } };
+    return {
+      status: 500,
+      jsonBody: { error: error instanceof Error ? error.message : 'Internal server error' },
+    };
   }
 }
 
 // GET /v1/alerts/by-service-type-and-vehicle-and-status/{serviceTypeId}/{vehicleId}/{status}
-export async function getAlertsByServiceTypeAndVehicleAndStatus(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+export async function getAlertsByServiceTypeAndVehicleAndStatus(
+  request: HttpRequest,
+  context: InvocationContext
+): Promise<HttpResponseInit> {
   try {
     const serviceTypeId = request.params.serviceTypeId;
     const vehicleId = request.params.vehicleId;
     const status = request.params.status;
 
     if (!serviceTypeId || !vehicleId || !status) {
-      return { status: 400, jsonBody: { error: 'Service Type ID, Vehicle ID, and Status are required' } };
+      return {
+        status: 400,
+        jsonBody: { error: 'Service Type ID, Vehicle ID, and Status are required' },
+      };
     }
 
     const alerts = await alertService.findByServiceTypeAndVehicleAndStatus(serviceTypeId, vehicleId, status);
     return { status: 200, jsonBody: alerts };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in getAlertsByServiceTypeAndVehicleAndStatus:', error);
-    return { status: 500, jsonBody: { error: error.message || 'Internal server error' } };
+    return {
+      status: 500,
+      jsonBody: { error: error instanceof Error ? error.message : 'Internal server error' },
+    };
   }
 }
 
@@ -220,9 +266,12 @@ export async function getAlertsByLineItem(request: HttpRequest, context: Invocat
 
     const alerts = await alertService.findByLineItemId(lineItemId);
     return { status: 200, jsonBody: alerts };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in getAlertsByLineItem:', error);
-    return { status: 500, jsonBody: { error: error.message || 'Internal server error' } };
+    return {
+      status: 500,
+      jsonBody: { error: error instanceof Error ? error.message : 'Internal server error' },
+    };
   }
 }
 
@@ -236,9 +285,12 @@ export async function getAlertsByInvoice(request: HttpRequest, context: Invocati
 
     const alerts = await alertService.findByInvoiceId(invoiceId);
     return { status: 200, jsonBody: alerts };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in getAlertsByInvoice:', error);
-    return { status: 500, jsonBody: { error: error.message || 'Internal server error' } };
+    return {
+      status: 500,
+      jsonBody: { error: error instanceof Error ? error.message : 'Internal server error' },
+    };
   }
 }
 
@@ -252,14 +304,20 @@ export async function getAlertsByReasons(request: HttpRequest, context: Invocati
 
     const alerts = await alertService.findByReasons(reasons);
     return { status: 200, jsonBody: alerts };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in getAlertsByReasons:', error);
-    return { status: 500, jsonBody: { error: error.message || 'Internal server error' } };
+    return {
+      status: 500,
+      jsonBody: { error: error instanceof Error ? error.message : 'Internal server error' },
+    };
   }
 }
 
 // GET /v1/alerts/by-valid-line-item/{validLineItem}
-export async function getAlertsByValidLineItem(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+export async function getAlertsByValidLineItem(
+  request: HttpRequest,
+  context: InvocationContext
+): Promise<HttpResponseInit> {
   try {
     const validLineItem = request.params.validLineItem;
     if (!validLineItem) {
@@ -268,9 +326,12 @@ export async function getAlertsByValidLineItem(request: HttpRequest, context: In
 
     const alerts = await alertService.findByValidLineItem(validLineItem);
     return { status: 200, jsonBody: alerts };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in getAlertsByValidLineItem:', error);
-    return { status: 500, jsonBody: { error: error.message || 'Internal server error' } };
+    return {
+      status: 500,
+      jsonBody: { error: error instanceof Error ? error.message : 'Internal server error' },
+    };
   }
 }
 
@@ -284,9 +345,12 @@ export async function bulkImportAlerts(request: HttpRequest, context: Invocation
 
     const result = await alertService.bulkImport(alerts);
     return { status: 200, jsonBody: result };
-  } catch (error: any) {
+  } catch (error: unknown) {
     context.error('Error in bulkImportAlerts:', error);
-    return { status: 400, jsonBody: { error: error.message || 'Bad request' } };
+    return {
+      status: 400,
+      jsonBody: { error: error instanceof Error ? error.message : 'Bad request' },
+    };
   }
 }
 
@@ -294,95 +358,95 @@ export async function bulkImportAlerts(request: HttpRequest, context: Invocation
 app.http('getAlerts', {
   methods: ['GET'],
   route: 'v1/alerts',
-  handler: getAlerts
+  handler: getAlerts,
 });
 
 app.http('getAlert', {
   methods: ['GET'],
   route: 'v1/alerts/{id}',
-  handler: getAlert
+  handler: getAlert,
 });
 
 app.http('createAlert', {
   methods: ['POST'],
   route: 'v1/alerts',
-  handler: createAlert
+  handler: createAlert,
 });
 
 app.http('updateAlert', {
   methods: ['PUT'],
   route: 'v1/alerts/{id}',
-  handler: updateAlert
+  handler: updateAlert,
 });
 
 app.http('deleteAlert', {
   methods: ['DELETE'],
   route: 'v1/alerts/{id}',
-  handler: deleteAlert
+  handler: deleteAlert,
 });
 
 app.http('getAlertsByType', {
   methods: ['GET'],
   route: 'v1/alerts/by-type/{type}',
-  handler: getAlertsByType
+  handler: getAlertsByType,
 });
 
 app.http('getAlertsByCategory', {
   methods: ['GET'],
   route: 'v1/alerts/by-category/{category}',
-  handler: getAlertsByCategory
+  handler: getAlertsByCategory,
 });
 
 app.http('getAlertsByVehicle', {
   methods: ['GET'],
   route: 'v1/alerts/by-vehicle/{vehicleId}',
-  handler: getAlertsByVehicle
+  handler: getAlertsByVehicle,
 });
 
 app.http('getAlertsByServiceType', {
   methods: ['GET'],
   route: 'v1/alerts/by-service-type/{serviceTypeId}',
-  handler: getAlertsByServiceType
+  handler: getAlertsByServiceType,
 });
 
 app.http('getAlertsByStatus', {
   methods: ['GET'],
   route: 'v1/alerts/by-status/{status}',
-  handler: getAlertsByStatus
+  handler: getAlertsByStatus,
 });
 
 app.http('getAlertsByServiceTypeAndVehicleAndStatus', {
   methods: ['GET'],
   route: 'v1/alerts/by-service-type-and-vehicle-and-status/{serviceTypeId}/{vehicleId}/{status}',
-  handler: getAlertsByServiceTypeAndVehicleAndStatus
+  handler: getAlertsByServiceTypeAndVehicleAndStatus,
 });
 
 app.http('getAlertsByLineItem', {
   methods: ['GET'],
   route: 'v1/alerts/by-line-item/{lineItemId}',
-  handler: getAlertsByLineItem
+  handler: getAlertsByLineItem,
 });
 
 app.http('getAlertsByInvoice', {
   methods: ['GET'],
   route: 'v1/alerts/by-invoice/{invoiceId}',
-  handler: getAlertsByInvoice
+  handler: getAlertsByInvoice,
 });
 
 app.http('getAlertsByReasons', {
   methods: ['GET'],
   route: 'v1/alerts/by-reasons/{reasons}',
-  handler: getAlertsByReasons
+  handler: getAlertsByReasons,
 });
 
 app.http('getAlertsByValidLineItem', {
   methods: ['GET'],
   route: 'v1/alerts/by-valid-line-item/{validLineItem}',
-  handler: getAlertsByValidLineItem
+  handler: getAlertsByValidLineItem,
 });
 
 app.http('bulkImportAlerts', {
   methods: ['POST'],
   route: 'v1/alerts/import',
-  handler: bulkImportAlerts
+  handler: bulkImportAlerts,
 });

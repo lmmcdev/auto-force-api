@@ -7,9 +7,9 @@ export interface CreateAlertDto {
   lineItemId?: string;
   invoiceId?: string;
   serviceTypeId?: string;
-  validLineItem?: string;  // ID of a line-item
+  validLineItem?: string; // ID of a line-item
   reasons: AlertReasons;
-  status?: AlertStatus;    // Defaults to 'Pending'
+  status?: AlertStatus; // Defaults to 'Pending'
   message: string;
   resolution?: AlertResolution;
 }

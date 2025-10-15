@@ -19,30 +19,26 @@ export class HealthService {
       environment: process.env.NODE_ENV || 'development',
       services: {
         database: await this.checkDatabaseHealth(),
-        api: 'healthy'
+        api: 'healthy',
       },
       memory: {
         used: Math.round(memoryUsage.heapUsed / 1024 / 1024),
         total: Math.round(memoryUsage.heapTotal / 1024 / 1024),
-        percentage: Math.round((memoryUsage.heapUsed / memoryUsage.heapTotal) * 100)
-      }
+        percentage: Math.round((memoryUsage.heapUsed / memoryUsage.heapTotal) * 100),
+      },
     };
   }
 
   async getSimpleHealthStatus(): Promise<{ status: string; timestamp: string }> {
     return {
       status: 'ok',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 
   private async checkDatabaseHealth(): Promise<'healthy' | 'unhealthy'> {
-    try {
-      // Here you would implement actual Cosmos DB health check
-      // For now, we'll simulate a health check
-      return 'healthy';
-    } catch (error) {
-      return 'unhealthy';
-    }
+    // Here you would implement actual Cosmos DB health check
+    // For now, we'll simulate a health check
+    return 'healthy';
   }
 }

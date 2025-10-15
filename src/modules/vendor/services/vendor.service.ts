@@ -1,46 +1,49 @@
 import { SqlQuerySpec } from '@azure/cosmos';
-import { getVendorsContainer } from '../../../infra/cosmos'
-import { Vendor, VendorEntity, VendorStatus, VendorType } from "../entities/vendor.entity";
-import { CreateVendorDTO } from "../dto/create-vendor.dto";
-import { UpdateVendorDTO } from "../dto/update-vendor.dto";
+import { getVendorsContainer } from '../../../infra/cosmos';
+import { Vendor, VendorStatus, VendorType } from '../entities/vendor.entity';
+import { UpdateVendorDTO } from '../dto/update-vendor.dto';
 import { QueryVendorDTO } from '../dto/query-vendor.dto';
 
-function nowIso() { return new Date().toISOString(); }
+function nowIso() {
+  return new Date().toISOString();
+}
 
 // Helper para remover campos undefined (Cosmos no acepta undefined, solo null)
 function cleanUndefined<T>(obj: T): T {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj !== 'object') return obj;
 
-  const cleaned: any = Array.isArray(obj) ? [] : {};
+  const cleaned: Record<string, unknown> | unknown[] = Array.isArray(obj) ? [] : {};
   for (const key in obj) {
     const value = obj[key];
     if (value !== undefined) {
-      cleaned[key] = typeof value === 'object' ? cleanUndefined(value) : value;
+      if (Array.isArray(cleaned)) {
+        cleaned.push(typeof value === 'object' ? cleanUndefined(value) : value);
+      } else {
+        cleaned[key] = typeof value === 'object' ? cleanUndefined(value) : value;
+      }
     }
   }
-  return cleaned;
+  return cleaned as T;
 }
 
 export class VendorService {
-
-   private get container() {
+  private get container() {
     return getVendorsContainer();
   }
 
-   async create( payload : Omit<Vendor, "id" | "createdAt" | "updatedAt">): Promise<Vendor>{
+  async create(payload: Omit<Vendor, 'id' | 'createdAt' | 'updatedAt'>): Promise<Vendor> {
     if (!payload.name?.trim()) throw new Error('name is required');
 
     // chequear duplicado por nombre (si aplicaste uniqueKeyPolicy, Cosmos ya lo protege)
     const query: SqlQuerySpec = {
       query: 'SELECT TOP 1 * FROM c WHERE LOWER(c.name) = LOWER(@name)',
-      parameters: [{ name: '@name', value: payload.name }]
+      parameters: [{ name: '@name', value: payload.name }],
     };
     const { resources } = await this.container.items.query<Vendor>(query).fetchAll();
     if (resources.length > 0) {
       throw new Error('vendor with same name already exists');
     }
-
 
     const doc: Vendor = {
       id: this.generateId(),
@@ -58,10 +61,9 @@ export class VendorService {
     const cleanDoc = cleanUndefined(doc);
     await this.container.items.create(cleanDoc);
     return cleanDoc;
+  }
 
-   }
-
-    async getById(id: string): Promise<Vendor | null> {
+  async getById(id: string): Promise<Vendor | null> {
     try {
       const { resource } = await this.container.item(id, id).read<Vendor>();
       return resource ?? null;
@@ -69,13 +71,13 @@ export class VendorService {
       return null;
     }
   }
-  async findAll(): Promise<Vendor[]>{
-    const query: SqlQuerySpec ={
-    query: `SELECT * FROM c ORDER BY c.id`
-  };
-    const {resources} =await this.container.items.query(query).fetchAll()
-    return resources
-  }  
+  async findAll(): Promise<Vendor[]> {
+    const query: SqlQuerySpec = {
+      query: `SELECT * FROM c ORDER BY c.id`,
+    };
+    const { resources } = await this.container.items.query(query).fetchAll();
+    return resources;
+  }
 
   async find(query: QueryVendorDTO = {}): Promise<{ data: Vendor[]; total: number }> {
     const take = Math.max(1, Math.min(query.take ?? 50, 1000)); // Limit between 1-1000
@@ -83,7 +85,7 @@ export class VendorService {
 
     // Build dynamic query based on provided filters
     let whereClause = 'WHERE 1=1';
-    const parameters: any[] = [];
+    const parameters: Array<{ name: string; value: string }> = [];
 
     if (query.status) {
       whereClause += ' AND c.status = @status';
@@ -102,7 +104,7 @@ export class VendorService {
 
     const q: SqlQuerySpec = {
       query: `SELECT * FROM c ${whereClause} ORDER BY c.name`,
-      parameters: parameters
+      parameters: parameters,
     };
 
     try {
@@ -115,7 +117,7 @@ export class VendorService {
       console.error('Cosmos DB query error:', error);
       // Fallback to simple query without filters
       const fallbackQuery: SqlQuerySpec = {
-        query: 'SELECT * FROM c ORDER BY c.name'
+        query: 'SELECT * FROM c ORDER BY c.name',
       };
       const { resources } = await this.container.items.query<Vendor>(fallbackQuery).fetchAll();
       const total = resources.length;
@@ -141,7 +143,7 @@ export class VendorService {
       ...current,
       ...payload,
       name: payload.name ? payload.name.trim() : current.name,
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     };
 
     await this.container.item(id, id).replace(next);
@@ -155,20 +157,19 @@ export class VendorService {
     await this.container.item(id, id).delete();
   }
 
+  private generateId(): string {
+    return `vend_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  }
 
-    private generateId(): string {
-      return `vend_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    }
-
-// Buscar vendors por status
-  async findByStatus(status: "Active" | "Inactive"): Promise<Vendor[]> {
+  // Buscar vendors por status
+  async findByStatus(status: 'Active' | 'Inactive'): Promise<Vendor[]> {
     const q: SqlQuerySpec = {
       query: `
         SELECT * FROM c
         WHERE c.status = @status
         ORDER BY c.name
       `,
-      parameters: [{ name: "@status", value: status }],
+      parameters: [{ name: '@status', value: status }],
     };
 
     const { resources } = await this.container.items.query<Vendor>(q).fetchAll();
@@ -184,8 +185,8 @@ export class VendorService {
         ORDER BY c.name
       `,
       parameters: [
-        { name: "@status", value: status },
-        { name: "@type", value: type },
+        { name: '@status', value: status },
+        { name: '@type', value: type },
       ],
     };
 
@@ -193,9 +194,9 @@ export class VendorService {
     return resources;
   }
 
-  async bulkImport(vendors: Vendor[]): Promise<{ success: Vendor[]; errors: { item: any; error: string }[] }> {
+  async bulkImport(vendors: Vendor[]): Promise<{ success: Vendor[]; errors: { item: Vendor; error: string }[] }> {
     const success: Vendor[] = [];
-    const errors: { item: any; error: string }[] = [];
+    const errors: { item: Vendor; error: string }[] = [];
 
     for (const item of vendors) {
       try {
@@ -239,16 +240,15 @@ export class VendorService {
         const cleanDoc = cleanUndefined(doc);
         await this.container.items.create(cleanDoc);
         success.push(cleanDoc);
-      } catch (error: any) {
+      } catch (error) {
         errors.push({
           item,
-          error: error.message || 'Failed to create vendor'
+          error: error instanceof Error ? error.message : 'Failed to create vendor',
         });
       }
     }
 
     return { success, errors };
   }
-
 }
 export const vendorService = new VendorService();

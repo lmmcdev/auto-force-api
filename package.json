@@ -9,15 +9,25 @@
     "clean": "rimraf dist",
     "prestart": "npm run clean && npm run build",
     "start": "func start",
-    "test": "echo \"No tests yet...\""
+    "test": "echo \"No tests yet...\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix"
   },
   "dependencies": {
     "@azure/cosmos": "^4.5.1",
     "@azure/functions": "^4.0.0"
   },
   "devDependencies": {
-    "@types/node": "18.x",
+    "@types/node": "^18.19.130",
+    "@typescript-eslint/eslint-plugin": "^8.46.1",
+    "@typescript-eslint/parser": "^8.46.1",
     "azure-functions-core-tools": "^4.x",
+    "eslint": "^9.37.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2",
     "rimraf": "^5.0.0",
     "typescript": "^4.0.0"
   }
