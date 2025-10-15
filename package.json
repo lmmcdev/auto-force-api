@@ -9,7 +9,9 @@
     "clean": "rimraf dist",
     "prestart": "npm run clean && npm run build",
     "start": "func start",
-    "test": "echo \"No tests yet...\""
+    "test": "echo \"No tests yet...\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@azure/cosmos": "^4.5.1",
@@ -18,6 +20,7 @@
   "devDependencies": {
     "@types/node": "18.x",
     "azure-functions-core-tools": "^4.x",
+    "prettier": "^3.6.2",
     "rimraf": "^5.0.0",
     "typescript": "^4.0.0"
   }
