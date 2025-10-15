@@ -20,7 +20,7 @@
     "@azure/functions": "^4.0.0"
   },
   "devDependencies": {
-    "@types/node": "18.x",
+    "@types/node": "^18.19.130",
     "@typescript-eslint/eslint-plugin": "^8.46.1",
     "@typescript-eslint/parser": "^8.46.1",
     "azure-functions-core-tools": "^4.x",
