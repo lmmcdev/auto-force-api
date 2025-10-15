@@ -1,21 +1,20 @@
-import { VendorController } from "./controllers/vendor.controller";
-import { VendorService } from "./services/vendor.service";
+import { VendorController } from './controllers/vendor.controller';
+import { VendorService } from './services/vendor.service';
 
-export class VendorModule{
-    private vendorService: VendorService;
-    private vendorController: VendorController;
+export class VendorModule {
+  private vendorService: VendorService;
+  private vendorController: VendorController;
 
-    constructor(){
-        this.vendorService = new VendorService();
-        this.vendorController = new VendorController();
+  constructor() {
+    this.vendorService = new VendorService();
+    this.vendorController = new VendorController();
+  }
 
-    }
+  getController(): VendorController {
+    return this.vendorController;
+  }
 
-    getController(): VendorController{
-        return this.vendorController;
-    }
-
-    getService(): VendorService{
-        return this.vendorService;
-    }
+  getService(): VendorService {
+    return this.vendorService;
+  }
 }

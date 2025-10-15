@@ -1,16 +1,22 @@
-export type InvoiceStatus = 'Draft' | 'PendingAlertReview'|'Approved' | 'Rejected' | 'Paid' | 'Cancelled';
+export type InvoiceStatus =
+  | 'Draft'
+  | 'PendingAlertReview'
+  | 'Approved'
+  | 'Rejected'
+  | 'Paid'
+  | 'Cancelled';
 
 export interface Invoice {
   id: string;
   vehicleId: string; // Associated with a vehicle
-  vendorId: string;  // Associated with a vendor
+  vendorId: string; // Associated with a vendor
   invoiceNumber: string;
   orderStartDate: string; // ISO date string
-  uploadDate: string;     // ISO date string
-  invoiceAmount: number;  // Number with two decimal places
-  subTotal : number;
+  uploadDate: string; // ISO date string
+  invoiceAmount: number; // Number with two decimal places
+  subTotal: number;
   status: InvoiceStatus;
-  tax: number;           // Number with two decimal places
+  tax: number; // Number with two decimal places
   description: string;
   createdAt?: string;
   updatedAt?: string;
@@ -56,6 +62,4 @@ export class InvoiceEntity implements Invoice {
   static formatAmount(amount: number): number {
     return Number(amount.toFixed(2));
   }
-
-
 }

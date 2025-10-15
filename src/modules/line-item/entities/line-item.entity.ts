@@ -3,18 +3,18 @@ export type LineItemType = 'Parts' | 'Labor';
 export interface LineItem {
   id: string;
   serviceTypeId: string; // Associated with a service-type (required)
-  invoiceId: string;     // Associated with an invoice (required)
-  vehicleId: string;     // Associated with a vehicle (inherited from invoice)
-  vendorId: string;      // Associated with a vendor (inherited from invoice)
-  unitPrice: number;     // Number with two decimal places
-  quantity: number;      // Number with two decimal places
-  totalPrice: number;    // Calculated: quantity * unitPrice
-  type: LineItemType;    // Parts or Labor
-  mileage: number;       // Integer number
-  taxable: boolean;      // true or false
-  warrantyMileage?: number;  // Optional warranty mileage
-  warrantyDate?: string;     // Optional warranty date (ISO string)
-  warranty: boolean;     // true or false
+  invoiceId: string; // Associated with an invoice (required)
+  vehicleId: string; // Associated with a vehicle (inherited from invoice)
+  vendorId: string; // Associated with a vendor (inherited from invoice)
+  unitPrice: number; // Number with two decimal places
+  quantity: number; // Number with two decimal places
+  totalPrice: number; // Calculated: quantity * unitPrice
+  type: LineItemType; // Parts or Labor
+  mileage: number; // Integer number
+  taxable: boolean; // true or false
+  warrantyMileage?: number; // Optional warranty mileage
+  warrantyDate?: string; // Optional warranty date (ISO string)
+  warranty: boolean; // true or false
   description: string;
   createdAt?: string;
   updatedAt?: string;
@@ -47,11 +47,14 @@ export class LineItemEntity implements LineItem {
     this.vendorId = lineItem.vendorId || '';
     this.unitPrice = lineItem.unitPrice || 0;
     this.quantity = lineItem.quantity || 0;
-    this.totalPrice = lineItem.totalPrice || this.calculateTotalPrice(this.unitPrice, this.quantity);
+    this.totalPrice =
+      lineItem.totalPrice || this.calculateTotalPrice(this.unitPrice, this.quantity);
     this.type = lineItem.type || 'Parts';
     this.mileage = Math.floor(lineItem.mileage || 0); // Ensure integer
     this.taxable = lineItem.taxable ?? false;
-    this.warrantyMileage = lineItem.warrantyMileage ? Math.floor(lineItem.warrantyMileage) : undefined;
+    this.warrantyMileage = lineItem.warrantyMileage
+      ? Math.floor(lineItem.warrantyMileage)
+      : undefined;
     this.warrantyDate = lineItem.warrantyDate;
     this.warranty = lineItem.warranty ?? false;
     this.description = lineItem.description || '';

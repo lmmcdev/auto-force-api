@@ -1,6 +1,12 @@
-import { Vendor,VendorAddress,VendorContact,VendorStatus,VendorType } from "../entities/vendor.entity";
+import {
+  Vendor,
+  VendorAddress,
+  VendorContact,
+  VendorStatus,
+  VendorType,
+} from '../entities/vendor.entity';
 
-export interface QueryVendorDTO{
+export interface QueryVendorDTO {
   /**
    * Texto de búsqueda parcial en el nombre del vendor
    * Ej: q=acme devolverá "Acme Auto Shop"
@@ -27,5 +33,4 @@ export interface QueryVendorDTO{
    * Número máximo de registros a devolver (para paginación)
    */
   take?: number;
-
 }

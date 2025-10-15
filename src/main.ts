@@ -2,8 +2,8 @@ import { AppModule } from './app.module';
 import { initCosmos } from './infra/cosmos';
 
 // Inicializa una vez al arrancar el proceso
-const cosmosReady = initCosmos().catch((err) => {
-  console.error("Cosmos init error", err);
+const cosmosReady = initCosmos().catch(err => {
+  console.error('Cosmos init error', err);
   throw err;
 });
 

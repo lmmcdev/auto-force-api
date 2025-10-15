@@ -1,27 +1,21 @@
-import {
-  app,
-  HttpRequest,
-  HttpResponseInit,
-  InvocationContext,
-} from "@azure/functions";
-import { ServiceType, ServiceTypeStatus, ServiceTypeType } from "../entities/service-type.entity";
-import { CreateServiceTypeDto } from "../dto/create-service-type.dto";
-import { UpdateServiceTypeDto } from "../dto/update-service-type.dto";
-import { serviceTypeService } from "../services/service-type.service";
-import { QueryServiceTypeDto } from "../dto/query-service-type.dto";
+import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import { ServiceType, ServiceTypeStatus, ServiceTypeType } from '../entities/service-type.entity';
+import { CreateServiceTypeDto } from '../dto/create-service-type.dto';
+import { UpdateServiceTypeDto } from '../dto/update-service-type.dto';
+import { serviceTypeService } from '../services/service-type.service';
+import { QueryServiceTypeDto } from '../dto/query-service-type.dto';
 
-const serviceTypesRoute = "v1/service-types";
+const serviceTypesRoute = 'v1/service-types';
 
 export class ServiceTypeController {
-
   // POST /service-types
   async postOne(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
-      const body = (await request.json()) as Omit<ServiceType, "id" | "createdAt" | "updatedAt">;
+      const body = (await request.json()) as Omit<ServiceType, 'id' | 'createdAt' | 'updatedAt'>;
       const created = await serviceTypeService.create(body);
-      return { status: 201, jsonBody: { message: "Created", data: created } };
+      return { status: 201, jsonBody: { message: 'Created', data: created } };
     } catch (err: any) {
-      context.error("serviceType.postOne error", err);
+      context.error('serviceType.postOne error', err);
       return this.toError(err);
     }
   }
@@ -32,24 +26,27 @@ export class ServiceTypeController {
       const body = (await request.json()) as ServiceType[];
 
       if (!Array.isArray(body)) {
-        return { status: 400, jsonBody: { message: "Request body must be an array of service types" } };
+        return {
+          status: 400,
+          jsonBody: { message: 'Request body must be an array of service types' },
+        };
       }
 
       if (body.length === 0) {
-        return { status: 400, jsonBody: { message: "Array cannot be empty" } };
+        return { status: 400, jsonBody: { message: 'Array cannot be empty' } };
       }
 
       const result = await serviceTypeService.bulkImport(body);
 
       const response = {
-        message: "Import completed",
+        message: 'Import completed',
         summary: {
           total: body.length,
           success: result.success.length,
-          errors: result.errors.length
+          errors: result.errors.length,
         },
         data: result.success,
-        errors: result.errors
+        errors: result.errors,
       };
 
       // Return 207 (Multi-Status) if there were some errors, 201 if all succeeded
@@ -57,7 +54,7 @@ export class ServiceTypeController {
 
       return { status, jsonBody: response };
     } catch (err: any) {
-      context.error("serviceType.importList error", err);
+      context.error('serviceType.importList error', err);
       return this.toError(err);
     }
   }
@@ -66,14 +63,14 @@ export class ServiceTypeController {
   async getOne(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
       const id = request.params.id;
-      if (!id) return { status: 400, jsonBody: { message: "Missing id" } };
+      if (!id) return { status: 400, jsonBody: { message: 'Missing id' } };
 
       const found = await serviceTypeService.getById(id);
-      if (!found) return { status: 404, jsonBody: { message: "Not found" } };
+      if (!found) return { status: 404, jsonBody: { message: 'Not found' } };
 
       return { status: 200, jsonBody: { data: found } };
     } catch (err: any) {
-      context.error("serviceType.getOne error", err);
+      context.error('serviceType.getOne error', err);
       return this.toError(err);
     }
   }
@@ -84,17 +81,17 @@ export class ServiceTypeController {
       const url = new URL(request.url);
 
       const query: QueryServiceTypeDto = {
-        q: url.searchParams.get("q") ?? undefined,
-        status: (url.searchParams.get("status") as ServiceTypeStatus) ?? undefined,
-        type: (url.searchParams.get("type") as ServiceTypeType) ?? undefined,
-        skip: url.searchParams.get("skip") ? Number(url.searchParams.get("skip")) : undefined,
-        take: url.searchParams.get("take") ? Number(url.searchParams.get("take")) : undefined,
+        q: url.searchParams.get('q') ?? undefined,
+        status: (url.searchParams.get('status') as ServiceTypeStatus) ?? undefined,
+        type: (url.searchParams.get('type') as ServiceTypeType) ?? undefined,
+        skip: url.searchParams.get('skip') ? Number(url.searchParams.get('skip')) : undefined,
+        take: url.searchParams.get('take') ? Number(url.searchParams.get('take')) : undefined,
       };
 
       const { data, total } = await serviceTypeService.find(query);
       return { status: 200, jsonBody: { data, total } };
     } catch (err: any) {
-      context.error("serviceType.getMany error", err);
+      context.error('serviceType.getMany error', err);
       return this.toError(err);
     }
   }
@@ -103,13 +100,13 @@ export class ServiceTypeController {
   async putOne(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
       const id = request.params.id;
-      if (!id) return { status: 400, jsonBody: { message: "Missing id" } };
+      if (!id) return { status: 400, jsonBody: { message: 'Missing id' } };
 
       const body = (await request.json()) as UpdateServiceTypeDto;
       const updated = await serviceTypeService.update(id, body);
-      return { status: 200, jsonBody: { message: "OK", data: updated } };
+      return { status: 200, jsonBody: { message: 'OK', data: updated } };
     } catch (err: any) {
-      context.error("serviceType.putOne error", err);
+      context.error('serviceType.putOne error', err);
       return this.toError(err);
     }
   }
@@ -118,12 +115,12 @@ export class ServiceTypeController {
   async deleteOne(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
       const id = request.params.id;
-      if (!id) return { status: 400, jsonBody: { message: "Missing id" } };
+      if (!id) return { status: 400, jsonBody: { message: 'Missing id' } };
 
       await serviceTypeService.delete(id);
       return { status: 204 };
     } catch (err: any) {
-      context.error("serviceType.deleteOne error", err);
+      context.error('serviceType.deleteOne error', err);
       return this.toError(err);
     }
   }
@@ -132,14 +129,17 @@ export class ServiceTypeController {
   async getByStatus(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
       const status = request.params.status as ServiceTypeStatus;
-      if (!status || !["Active", "Inactive"].includes(status)) {
-        return { status: 400, jsonBody: { message: "Invalid status. Must be 'Active' or 'Inactive'" } };
+      if (!status || !['Active', 'Inactive'].includes(status)) {
+        return {
+          status: 400,
+          jsonBody: { message: "Invalid status. Must be 'Active' or 'Inactive'" },
+        };
       }
 
       const serviceTypes = await serviceTypeService.findByStatus(status);
       return { status: 200, jsonBody: { data: serviceTypes } };
     } catch (err: any) {
-      context.error("serviceType.getByStatus error", err);
+      context.error('serviceType.getByStatus error', err);
       return this.toError(err);
     }
   }
@@ -148,48 +148,56 @@ export class ServiceTypeController {
   async getByType(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
       const type = request.params.type as ServiceTypeType;
-      if (!type || !["Service", "Sales"].includes(type)) {
+      if (!type || !['Service', 'Sales'].includes(type)) {
         return { status: 400, jsonBody: { message: "Invalid type. Must be 'Service' or 'Sales'" } };
       }
 
       const serviceTypes = await serviceTypeService.findByType(type);
       return { status: 200, jsonBody: { data: serviceTypes } };
     } catch (err: any) {
-      context.error("serviceType.getByType error", err);
+      context.error('serviceType.getByType error', err);
       return this.toError(err);
     }
   }
 
   // GET /service-types/by-status-type/{status}/{type}
-  async getByStatusAndType(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  async getByStatusAndType(
+    request: HttpRequest,
+    context: InvocationContext
+  ): Promise<HttpResponseInit> {
     try {
       const status = request.params.status as ServiceTypeStatus;
       const type = request.params.type as ServiceTypeType;
 
-      if (!status || !["Active", "Inactive"].includes(status)) {
-        return { status: 400, jsonBody: { message: "Invalid status. Must be 'Active' or 'Inactive'" } };
+      if (!status || !['Active', 'Inactive'].includes(status)) {
+        return {
+          status: 400,
+          jsonBody: { message: "Invalid status. Must be 'Active' or 'Inactive'" },
+        };
       }
 
-      if (!type || !["Service", "Sales"].includes(type)) {
+      if (!type || !['Service', 'Sales'].includes(type)) {
         return { status: 400, jsonBody: { message: "Invalid type. Must be 'Service' or 'Sales'" } };
       }
 
       const serviceTypes = await serviceTypeService.findByStatusAndType(status, type);
       return { status: 200, jsonBody: { data: serviceTypes } };
     } catch (err: any) {
-      context.error("serviceType.getByStatusAndType error", err);
+      context.error('serviceType.getByStatusAndType error', err);
       return this.toError(err);
     }
   }
 
   // Mapeo de errores a HTTP
   private toError(err: any): HttpResponseInit {
-    const msg = String(err?.message ?? "Internal error");
-    const status =
-      /not found/i.test(msg) ? 404 :
-      /already exists/i.test(msg) ? 409 :
-      /required|invalid/i.test(msg) ? 400 :
-      500;
+    const msg = String(err?.message ?? 'Internal error');
+    const status = /not found/i.test(msg)
+      ? 404
+      : /already exists/i.test(msg)
+        ? 409
+        : /required|invalid/i.test(msg)
+          ? 400
+          : 500;
 
     return { status, jsonBody: { message: msg } };
   }
@@ -198,66 +206,66 @@ export class ServiceTypeController {
 export const serviceTypeController = new ServiceTypeController();
 
 // Basic CRUD endpoints
-app.http("PostServiceType", {
-  methods: ["POST"],
+app.http('PostServiceType', {
+  methods: ['POST'],
   route: serviceTypesRoute,
-  authLevel: "function",
+  authLevel: 'function',
   handler: (req, ctx) => serviceTypeController.postOne(req, ctx),
 });
 
-app.http("ImportServiceTypes", {
-  methods: ["POST"],
+app.http('ImportServiceTypes', {
+  methods: ['POST'],
   route: `${serviceTypesRoute}/import`,
-  authLevel: "function",
+  authLevel: 'function',
   handler: (req, ctx) => serviceTypeController.importList(req, ctx),
 });
 
-app.http("GetServiceType", {
-  methods: ["GET"],
+app.http('GetServiceType', {
+  methods: ['GET'],
   route: `${serviceTypesRoute}/{id}`,
-  authLevel: "function",
+  authLevel: 'function',
   handler: (req, ctx) => serviceTypeController.getOne(req, ctx),
 });
 
-app.http("ListServiceTypes", {
-  methods: ["GET"],
+app.http('ListServiceTypes', {
+  methods: ['GET'],
   route: serviceTypesRoute,
-  authLevel: "function",
+  authLevel: 'function',
   handler: (req, ctx) => serviceTypeController.getMany(req, ctx),
 });
 
-app.http("PutServiceType", {
-  methods: ["PUT"],
+app.http('PutServiceType', {
+  methods: ['PUT'],
   route: `${serviceTypesRoute}/{id}`,
-  authLevel: "function",
+  authLevel: 'function',
   handler: (req, ctx) => serviceTypeController.putOne(req, ctx),
 });
 
-app.http("DeleteServiceType", {
-  methods: ["DELETE"],
+app.http('DeleteServiceType', {
+  methods: ['DELETE'],
   route: `${serviceTypesRoute}/{id}`,
-  authLevel: "function",
+  authLevel: 'function',
   handler: (req, ctx) => serviceTypeController.deleteOne(req, ctx),
 });
 
 // Additional filter endpoints
-app.http("GetServiceTypesByStatus", {
-  methods: ["GET"],
+app.http('GetServiceTypesByStatus', {
+  methods: ['GET'],
   route: `${serviceTypesRoute}/by-status/{status}`,
-  authLevel: "function",
+  authLevel: 'function',
   handler: (req, ctx) => serviceTypeController.getByStatus(req, ctx),
 });
 
-app.http("GetServiceTypesByType", {
-  methods: ["GET"],
+app.http('GetServiceTypesByType', {
+  methods: ['GET'],
   route: `${serviceTypesRoute}/by-type/{type}`,
-  authLevel: "function",
+  authLevel: 'function',
   handler: (req, ctx) => serviceTypeController.getByType(req, ctx),
 });
 
-app.http("GetServiceTypesByStatusAndType", {
-  methods: ["GET"],
+app.http('GetServiceTypesByStatusAndType', {
+  methods: ['GET'],
   route: `${serviceTypesRoute}/by-status-type/{status}/{type}`,
-  authLevel: "function",
+  authLevel: 'function',
   handler: (req, ctx) => serviceTypeController.getByStatusAndType(req, ctx),
 });

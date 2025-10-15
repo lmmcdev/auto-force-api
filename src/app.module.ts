@@ -6,11 +6,10 @@ import { InvoiceModule } from './modules/invoice/invoice.module';
 import { LineItemModule } from './modules/line-item/line-item.module';
 import { AlertModule } from './modules/alert/alert.module';
 
-
 export class AppModule {
   private vehicleModule: VehicleModule;
   private healthModule: HealthModule;
-  private vendorModule : VendorModule;
+  private vendorModule: VendorModule;
   private serviceTypeModule: ServiceTypeModule;
   private invoiceModule: InvoiceModule;
   private lineItemModule: LineItemModule;
@@ -61,7 +60,7 @@ export class AppModule {
       serviceType: this.serviceTypeModule,
       invoice: this.invoiceModule,
       lineItem: this.lineItemModule,
-      alert: this.alertModule
+      alert: this.alertModule,
     };
   }
 }

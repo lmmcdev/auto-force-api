@@ -1,5 +1,9 @@
 import { SqlQuerySpec } from '@azure/cosmos';
-import { getLineItemsContainer, getInvoicesContainer, getServiceTypesContainer } from '../../../infra/cosmos';
+import {
+  getLineItemsContainer,
+  getInvoicesContainer,
+  getServiceTypesContainer,
+} from '../../../infra/cosmos';
 import { LineItem, LineItemType } from '../entities/line-item.entity';
 import { CreateLineItemDto } from '../dto/create-line-item.dto';
 import { UpdateLineItemDto } from '../dto/update-line-item.dto';
@@ -7,7 +11,9 @@ import { QueryLineItemDto } from '../dto/query-line-item.dto';
 import { invoiceService } from '../../invoice/services/invoice.service';
 import { alertService } from '../../alert/services/alert.service';
 
-function nowIso() { return new Date().toISOString(); }
+function nowIso() {
+  return new Date().toISOString();
+}
 
 // Helper para remover campos undefined (Cosmos no acepta undefined, solo null)
 function cleanUndefined<T>(obj: T): T {
@@ -25,7 +31,6 @@ function cleanUndefined<T>(obj: T): T {
 }
 
 export class LineItemService {
-
   private get container() {
     return getLineItemsContainer();
   }
@@ -38,7 +43,9 @@ export class LineItemService {
     return getServiceTypesContainer();
   }
 
-  async create(payload: Omit<LineItem, "id" | "totalPrice" | "createdAt" | "updatedAt">): Promise<LineItem> {
+  async create(
+    payload: Omit<LineItem, 'id' | 'totalPrice' | 'createdAt' | 'updatedAt'>
+  ): Promise<LineItem> {
     // Validate required fields
     if (!payload.serviceTypeId?.trim()) throw new Error('serviceTypeId is required');
     if (!payload.invoiceId?.trim()) throw new Error('invoiceId is required');
@@ -51,7 +58,9 @@ export class LineItemService {
 
     // Validate that service-type exists
     try {
-      const serviceType = await this.serviceTypesContainer.item(payload.serviceTypeId, payload.serviceTypeId).read();
+      const serviceType = await this.serviceTypesContainer
+        .item(payload.serviceTypeId, payload.serviceTypeId)
+        .read();
       if (!serviceType.resource) {
         throw new Error(`Service type with id '${payload.serviceTypeId}' not found`);
       }
@@ -62,7 +71,9 @@ export class LineItemService {
     // Validate that invoice exists and get vehicleId/vendorId
     let invoiceData;
     try {
-      const invoice = await this.invoicesContainer.item(payload.invoiceId, payload.invoiceId).read();
+      const invoice = await this.invoicesContainer
+        .item(payload.invoiceId, payload.invoiceId)
+        .read();
       if (!invoice.resource) {
         throw new Error(`Invoice with id '${payload.invoiceId}' not found`);
       }
@@ -84,7 +95,7 @@ export class LineItemService {
       serviceTypeId: payload.serviceTypeId.trim(),
       invoiceId: payload.invoiceId.trim(),
       vehicleId: invoiceData.vehicleId || '', // Auto-populate from invoice
-      vendorId: invoiceData.vendorId || '',   // Auto-populate from invoice
+      vendorId: invoiceData.vendorId || '', // Auto-populate from invoice
       unitPrice: unitPrice,
       quantity: quantity,
       totalPrice: totalPrice,
@@ -120,7 +131,13 @@ export class LineItemService {
 
     // Check warranty mileage and create alert if needed
     try {
-      await this.checkWarrantyMileage(doc.vehicleId, doc.id, doc.serviceTypeId, doc.mileage, doc.invoiceId);
+      await this.checkWarrantyMileage(
+        doc.vehicleId,
+        doc.id,
+        doc.serviceTypeId,
+        doc.mileage,
+        doc.invoiceId
+      );
     } catch (error) {
       console.error(`Failed to check warranty mileage for line item ${doc.id}:`, error);
       // Don't throw error - line item was created successfully
@@ -156,7 +173,7 @@ export class LineItemService {
 
   async findAll(): Promise<LineItem[]> {
     const query: SqlQuerySpec = {
-      query: `SELECT * FROM c ORDER BY c.createdAt DESC`
+      query: `SELECT * FROM c ORDER BY c.createdAt DESC`,
     };
     const { resources } = await this.container.items.query(query).fetchAll();
     return resources;
@@ -242,7 +259,7 @@ export class LineItemService {
 
     const q: SqlQuerySpec = {
       query: `SELECT * FROM c ${whereClause} ORDER BY c.createdAt DESC`,
-      parameters: parameters
+      parameters: parameters,
     };
 
     try {
@@ -255,7 +272,7 @@ export class LineItemService {
       console.error('Cosmos DB query error:', error);
       // Fallback to simple query
       const fallbackQuery: SqlQuerySpec = {
-        query: 'SELECT * FROM c ORDER BY c.createdAt DESC'
+        query: 'SELECT * FROM c ORDER BY c.createdAt DESC',
       };
       const { resources } = await this.container.items.query<LineItem>(fallbackQuery).fetchAll();
       const total = resources.length;
@@ -278,7 +295,9 @@ export class LineItemService {
     // Validate service-type exists if changing serviceTypeId
     if (payload.serviceTypeId && payload.serviceTypeId !== current.serviceTypeId) {
       try {
-        const serviceType = await this.serviceTypesContainer.item(payload.serviceTypeId, payload.serviceTypeId).read();
+        const serviceType = await this.serviceTypesContainer
+          .item(payload.serviceTypeId, payload.serviceTypeId)
+          .read();
         if (!serviceType.resource) {
           throw new Error(`Service type with id '${payload.serviceTypeId}' not found`);
         }
@@ -291,7 +310,9 @@ export class LineItemService {
     let newInvoiceData;
     if (payload.invoiceId && payload.invoiceId !== current.invoiceId) {
       try {
-        const invoice = await this.invoicesContainer.item(payload.invoiceId, payload.invoiceId).read();
+        const invoice = await this.invoicesContainer
+          .item(payload.invoiceId, payload.invoiceId)
+          .read();
         if (!invoice.resource) {
           throw new Error(`Invoice with id '${payload.invoiceId}' not found`);
         }
@@ -305,8 +326,10 @@ export class LineItemService {
     }
 
     // Calculate new total price if unit price or quantity changed
-    const unitPrice = payload.unitPrice !== undefined ? Number(payload.unitPrice.toFixed(2)) : current.unitPrice;
-    const quantity = payload.quantity !== undefined ? Number(payload.quantity.toFixed(2)) : current.quantity;
+    const unitPrice =
+      payload.unitPrice !== undefined ? Number(payload.unitPrice.toFixed(2)) : current.unitPrice;
+    const quantity =
+      payload.quantity !== undefined ? Number(payload.quantity.toFixed(2)) : current.quantity;
     const totalPrice = Number((unitPrice * quantity).toFixed(2));
 
     // Check if total price changed, invoice ID changed, or taxable status changed
@@ -323,11 +346,22 @@ export class LineItemService {
       quantity: quantity,
       totalPrice: totalPrice,
       // Auto-populate vehicleId and vendorId from new invoice if invoiceId changed
-      vehicleId: newInvoiceData ? newInvoiceData.vehicleId : (payload.vehicleId !== undefined ? payload.vehicleId : current.vehicleId),
-      vendorId: newInvoiceData ? newInvoiceData.vendorId : (payload.vendorId !== undefined ? payload.vendorId : current.vendorId),
+      vehicleId: newInvoiceData
+        ? newInvoiceData.vehicleId
+        : payload.vehicleId !== undefined
+          ? payload.vehicleId
+          : current.vehicleId,
+      vendorId: newInvoiceData
+        ? newInvoiceData.vendorId
+        : payload.vendorId !== undefined
+          ? payload.vendorId
+          : current.vendorId,
       mileage: payload.mileage !== undefined ? Math.floor(payload.mileage) : current.mileage,
-      warrantyMileage: payload.warrantyMileage !== undefined ? Math.floor(payload.warrantyMileage) : current.warrantyMileage,
-      updatedAt: nowIso()
+      warrantyMileage:
+        payload.warrantyMileage !== undefined
+          ? Math.floor(payload.warrantyMileage)
+          : current.warrantyMileage,
+      updatedAt: nowIso(),
     };
 
     await this.container.item(id, id).replace(next);
@@ -358,21 +392,36 @@ export class LineItemService {
 
     // Check warranty mileage and create alert if needed
     try {
-      await this.checkWarrantyMileage(next.vehicleId, next.id, next.serviceTypeId, next.mileage, next.invoiceId);
+      await this.checkWarrantyMileage(
+        next.vehicleId,
+        next.id,
+        next.serviceTypeId,
+        next.mileage,
+        next.invoiceId
+      );
     } catch (error) {
-      console.error(`Failed to check warranty mileage for line item ${next.id} after update:`, error);
+      console.error(
+        `Failed to check warranty mileage for line item ${next.id} after update:`,
+        error
+      );
       // Don't throw error - line item was updated successfully
     }
 
     // Check for lower prices and create alert if needed
     try {
-      await this.checkLowerPrice(next.serviceTypeId, next.type, next.unitPrice, next.id, next.vehicleId);
+      await this.checkLowerPrice(
+        next.serviceTypeId,
+        next.type,
+        next.unitPrice,
+        next.id,
+        next.vehicleId
+      );
     } catch (error) {
       console.error(`Failed to check lower price for line item ${next.id} after update:`, error);
       // Don't throw error - line item was updated successfully
     }
 
-     // Check for same service and create alert if needed
+    // Check for same service and create alert if needed
     try {
       await this.checkSameService(next.serviceTypeId, next.type, next.id, next.vehicleId);
     } catch (error) {
@@ -409,7 +458,7 @@ export class LineItemService {
   async findByInvoiceId(invoiceId: string): Promise<LineItem[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.invoiceId = @invoiceId ORDER BY c.createdAt ASC',
-      parameters: [{ name: '@invoiceId', value: invoiceId }]
+      parameters: [{ name: '@invoiceId', value: invoiceId }],
     };
     const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
     return resources;
@@ -419,7 +468,7 @@ export class LineItemService {
   async findByServiceTypeId(serviceTypeId: string): Promise<LineItem[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId ORDER BY c.createdAt DESC',
-      parameters: [{ name: '@serviceTypeId', value: serviceTypeId }]
+      parameters: [{ name: '@serviceTypeId', value: serviceTypeId }],
     };
     const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
     return resources;
@@ -429,7 +478,7 @@ export class LineItemService {
   async findByType(type: LineItemType): Promise<LineItem[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.type = @type ORDER BY c.createdAt DESC',
-      parameters: [{ name: '@type', value: type }]
+      parameters: [{ name: '@type', value: type }],
     };
     const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
     return resources;
@@ -439,7 +488,7 @@ export class LineItemService {
   async findTaxable(taxable: boolean): Promise<LineItem[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.taxable = @taxable ORDER BY c.createdAt DESC',
-      parameters: [{ name: '@taxable', value: taxable }]
+      parameters: [{ name: '@taxable', value: taxable }],
     };
     const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
     return resources;
@@ -449,74 +498,106 @@ export class LineItemService {
   async findWithWarranty(warranty: boolean): Promise<LineItem[]> {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.warranty = @warranty ORDER BY c.createdAt DESC',
-      parameters: [{ name: '@warranty', value: warranty }]
+      parameters: [{ name: '@warranty', value: warranty }],
     };
     const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
   // Find by serviceTypeId, type, and unitPrice with descending unitPrice order
-  async findByServiceTypeIdAndTypeAndUnitPrice(serviceTypeId: string, type: LineItemType, unitPrice: number): Promise<LineItem[]> {
+  async findByServiceTypeIdAndTypeAndUnitPrice(
+    serviceTypeId: string,
+    type: LineItemType,
+    unitPrice: number
+  ): Promise<LineItem[]> {
     const q: SqlQuerySpec = {
-      query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.unitPrice = @unitPrice ORDER BY c.unitPrice DESC',
+      query:
+        'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.unitPrice = @unitPrice ORDER BY c.unitPrice DESC',
       parameters: [
         { name: '@serviceTypeId', value: serviceTypeId },
         { name: '@type', value: type },
-        { name: '@unitPrice', value: unitPrice }
-      ]
+        { name: '@unitPrice', value: unitPrice },
+      ],
     };
     const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
   // Find line items with lower prices for same serviceTypeId and type
-  async findLowerPricesByServiceTypeAndTypeAndVehicleId(serviceTypeId: string, type: LineItemType, unitPrice: number, vehicleId: string): Promise<LineItem[]> {
+  async findLowerPricesByServiceTypeAndTypeAndVehicleId(
+    serviceTypeId: string,
+    type: LineItemType,
+    unitPrice: number,
+    vehicleId: string
+  ): Promise<LineItem[]> {
     const q: SqlQuerySpec = {
-      query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.unitPrice < @unitPrice AND c.vehicleId = @vehicleId ORDER BY c.unitPrice ASC',
+      query:
+        'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.unitPrice < @unitPrice AND c.vehicleId = @vehicleId ORDER BY c.unitPrice ASC',
       parameters: [
         { name: '@serviceTypeId', value: serviceTypeId },
         { name: '@type', value: type },
         { name: '@unitPrice', value: unitPrice },
-        { name: '@vehicleId', value: vehicleId }
-      ]
+        { name: '@vehicleId', value: vehicleId },
+      ],
     };
     const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
   // Find line items with same serviceTypeId and type an VehicleID
-  async findByServiceTypeAndTypeAndVehicleId(serviceTypeId: string, type: LineItemType, vehicleId: string): Promise<LineItem[]> {
+  async findByServiceTypeAndTypeAndVehicleId(
+    serviceTypeId: string,
+    type: LineItemType,
+    vehicleId: string
+  ): Promise<LineItem[]> {
     const q: SqlQuerySpec = {
-      query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.vehicleId = @vehicleId ORDER BY c.unitPrice ASC',
+      query:
+        'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.vehicleId = @vehicleId ORDER BY c.unitPrice ASC',
       parameters: [
         { name: '@serviceTypeId', value: serviceTypeId },
         { name: '@type', value: type },
-        { name: '@vehicleId', value: vehicleId }
-      ]
+        { name: '@vehicleId', value: vehicleId },
+      ],
     };
     const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
   // Find line items with same serviceTypeId and type an VehicleID
-  async findByServiceTypeAndTypeAndVehicleIdWithWarrantyTrue(serviceTypeId: string, type: LineItemType, vehicleId: string): Promise<LineItem[]> {
+  async findByServiceTypeAndTypeAndVehicleIdWithWarrantyTrue(
+    serviceTypeId: string,
+    type: LineItemType,
+    vehicleId: string
+  ): Promise<LineItem[]> {
     const q: SqlQuerySpec = {
-      query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.vehicleId = @vehicleId AND c.warranty = true ORDER BY c.unitPrice ASC',
+      query:
+        'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.vehicleId = @vehicleId AND c.warranty = true ORDER BY c.unitPrice ASC',
       parameters: [
         { name: '@serviceTypeId', value: serviceTypeId },
         { name: '@type', value: type },
-        { name: '@vehicleId', value: vehicleId }
-      ]
+        { name: '@vehicleId', value: vehicleId },
+      ],
     };
     const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
   // Check for lower prices and create alert if found
-  async checkLowerPrice(serviceTypeId: string, type: LineItemType, unitPrice: number, lineItemId: string, vehicleId: string): Promise<void> {
+  async checkLowerPrice(
+    serviceTypeId: string,
+    type: LineItemType,
+    unitPrice: number,
+    lineItemId: string,
+    vehicleId: string
+  ): Promise<void> {
     try {
       // Find line items with lower prices for same serviceTypeId and type
-      const lowerPriceItems = await this.findLowerPricesByServiceTypeAndTypeAndVehicleId(serviceTypeId, type, unitPrice, vehicleId);
+      const lowerPriceItems = await this.findLowerPricesByServiceTypeAndTypeAndVehicleId(
+        serviceTypeId,
+        type,
+        unitPrice,
+        vehicleId
+      );
 
       // Exclude the current line item
       const filteredItems = lowerPriceItems.filter(item => item.id !== lineItemId);
@@ -535,20 +616,23 @@ export class LineItemService {
 
         // Create alert
         const alertData = {
-          type: "HIGHER_PRICE",
-          category: "ServiceType",
+          type: 'HIGHER_PRICE',
+          category: 'ServiceType',
           vehicleId: currentLineItem.vehicleId,
           lineItemId: lineItemId,
           validLineItem: validLineItem.id,
           invoiceId: currentLineItem.invoiceId,
           serviceTypeId: serviceTypeId,
-          reasons: "LOWER_PRICE_FOUND",
-          status: "Pending",
-          message: "A previous line item for this service type was charged at a lower unit price. Please review for potential overpricing."
+          reasons: 'LOWER_PRICE_FOUND',
+          status: 'Pending',
+          message:
+            'A previous line item for this service type was charged at a lower unit price. Please review for potential overpricing.',
         };
 
         await alertService.create(alertData);
-        console.log(`Alert created for line item ${lineItemId} - lower price found: ${validLineItem.unitPrice} vs ${unitPrice}`);
+        console.log(
+          `Alert created for line item ${lineItemId} - lower price found: ${validLineItem.unitPrice} vs ${unitPrice}`
+        );
       }
     } catch (error) {
       console.error(`Failed to check lower price for line item ${lineItemId}:`, error);
@@ -557,10 +641,19 @@ export class LineItemService {
   }
 
   // Check for lower prices and create alert if found
-  async checkSameService(serviceTypeId: string, type: LineItemType, lineItemId: string, vehicleId: string): Promise<void> {
+  async checkSameService(
+    serviceTypeId: string,
+    type: LineItemType,
+    lineItemId: string,
+    vehicleId: string
+  ): Promise<void> {
     try {
       // Find line items with same serviceTypeId and type
-      const sameServiceItems = await this.findByServiceTypeAndTypeAndVehicleId(serviceTypeId, type, vehicleId);
+      const sameServiceItems = await this.findByServiceTypeAndTypeAndVehicleId(
+        serviceTypeId,
+        type,
+        vehicleId
+      );
 
       // Exclude the current line item
       const filteredItems = sameServiceItems.filter(item => item.id !== lineItemId);
@@ -579,20 +672,23 @@ export class LineItemService {
 
         // Create alert
         const alertData = {
-          type: "SAME_SERVICE",
-          category: "ServiceType",
+          type: 'SAME_SERVICE',
+          category: 'ServiceType',
           vehicleId: currentLineItem.vehicleId,
           lineItemId: lineItemId,
           validLineItem: validLineItem.id,
           invoiceId: currentLineItem.invoiceId,
           serviceTypeId: serviceTypeId,
-          reasons: "SAME_SERVICE_FOUND",
-          status: "Pending",
-          message: "A previous line item for this service type was a same service. Please review for potential overpricing."
+          reasons: 'SAME_SERVICE_FOUND',
+          status: 'Pending',
+          message:
+            'A previous line item for this service type was a same service. Please review for potential overpricing.',
         };
 
         await alertService.create(alertData);
-        console.log(`Alert created for line item ${lineItemId} - same service found: ${validLineItem.serviceTypeId}`);
+        console.log(
+          `Alert created for line item ${lineItemId} - same service found: ${validLineItem.serviceTypeId}`
+        );
       }
     } catch (error) {
       console.error(`Failed to check same service for line item ${lineItemId}:`, error);
@@ -601,7 +697,9 @@ export class LineItemService {
   }
 
   // Bulk import
-  async bulkImport(lineItems: LineItem[]): Promise<{ success: LineItem[]; errors: { item: any; error: string }[] }> {
+  async bulkImport(
+    lineItems: LineItem[]
+  ): Promise<{ success: LineItem[]; errors: { item: any; error: string }[] }> {
     const success: LineItem[] = [];
     const errors: { item: any; error: string }[] = [];
 
@@ -669,9 +767,9 @@ export class LineItemService {
           id: item.id.trim(),
           serviceTypeId: item.serviceTypeId.trim(),
           invoiceId: item.invoiceId.trim(),
-         //vhicleId: invoiceData.vehicleId || '', // Auto-populate from invoice
-         //vendorId: invoiceData.vendorId || '',   // Auto-populate from invoice
-          vehicleId: item.vehicleId || invoiceData.vehicleId ,
+          //vhicleId: invoiceData.vehicleId || '', // Auto-populate from invoice
+          //vendorId: invoiceData.vendorId || '',   // Auto-populate from invoice
+          vehicleId: item.vehicleId || invoiceData.vehicleId,
           vendorId: item.vendorId || invoiceData.vendorId,
           unitPrice: unitPrice,
           quantity: quantity,
@@ -687,7 +785,7 @@ export class LineItemService {
         await this.container.items.create(cleanDoc);
         success.push(cleanDoc);
 
-       /*
+        /*
 
         // Check warranty date and create alert if needed
         try {
@@ -721,14 +819,12 @@ export class LineItemService {
           // Don't throw error - line item was created successfully
         }
       */
-      }
-       catch (error: any) {
+      } catch (error: any) {
         errors.push({
           item,
-          error: error.message || 'Failed to create line item'
+          error: error.message || 'Failed to create line item',
         });
       }
-
     }
 
     // Update invoice amounts for all affected invoices
@@ -741,7 +837,10 @@ export class LineItemService {
         try {
           await invoiceService.updateInvoiceAmount(invoiceId);
         } catch (error) {
-          console.error(`Failed to update invoice amount for invoice ${invoiceId} during bulk import:`, error);
+          console.error(
+            `Failed to update invoice amount for invoice ${invoiceId} during bulk import:`,
+            error
+          );
           // Don't add to errors - line items were imported successfully
         }
       }
@@ -751,7 +850,12 @@ export class LineItemService {
   }
 
   // Check warranty date and create alert if overlapping warranty exists
-  async checkWarrantyDate(vehicleId: string, lineItemId: string, serviceTypeId: string, invoiceId: string): Promise<void> {
+  async checkWarrantyDate(
+    vehicleId: string,
+    lineItemId: string,
+    serviceTypeId: string,
+    invoiceId: string
+  ): Promise<void> {
     try {
       // Get order start date from invoice
       const orderStartDate = await invoiceService.getOrderStartDate(invoiceId);
@@ -772,11 +876,13 @@ export class LineItemService {
           { name: '@lineItemId', value: lineItemId },
           { name: '@vehicleId', value: vehicleId },
           { name: '@serviceTypeId', value: serviceTypeId },
-          { name: '@orderStartDate', value: orderStartDate }
-        ]
+          { name: '@orderStartDate', value: orderStartDate },
+        ],
       };
 
-      const { resources: overlappingWarranties } = await this.container.items.query(warrantyQuery).fetchAll();
+      const { resources: overlappingWarranties } = await this.container.items
+        .query(warrantyQuery)
+        .fetchAll();
 
       // If overlapping warranties exist, create an alert
       if (overlappingWarranties.length > 0) {
@@ -794,7 +900,8 @@ export class LineItemService {
           serviceTypeId: serviceTypeId,
           reasons: 'DATE_VALID',
           status: 'Pending',
-          message: 'Existing service type has a valid warranty that overlaps with invoice start date.'
+          message:
+            'Existing service type has a valid warranty that overlaps with invoice start date.',
         });
 
         console.log(`Created warranty overlap alert for line item ${lineItemId}`);
@@ -806,7 +913,13 @@ export class LineItemService {
   }
 
   // Check warranty mileage and create alert if overlapping warranty exists
-  async checkWarrantyMileage(vehicleId: string, lineItemId: string, serviceTypeId: string, mileage: number, invoiceId: string): Promise<void> {
+  async checkWarrantyMileage(
+    vehicleId: string,
+    lineItemId: string,
+    serviceTypeId: string,
+    mileage: number,
+    invoiceId: string
+  ): Promise<void> {
     try {
       // Search for line items with overlapping warranty mileage
       const warrantyMileageQuery: SqlQuerySpec = {
@@ -821,11 +934,13 @@ export class LineItemService {
           { name: '@lineItemId', value: lineItemId },
           { name: '@vehicleId', value: vehicleId },
           { name: '@serviceTypeId', value: serviceTypeId },
-          { name: '@mileage', value: mileage }
-        ]
+          { name: '@mileage', value: mileage },
+        ],
       };
 
-      const { resources: overlappingWarranties } = await this.container.items.query(warrantyMileageQuery).fetchAll();
+      const { resources: overlappingWarranties } = await this.container.items
+        .query(warrantyMileageQuery)
+        .fetchAll();
 
       // If overlapping warranties exist, create an alert
       if (overlappingWarranties.length > 0) {
@@ -843,7 +958,7 @@ export class LineItemService {
           serviceTypeId: serviceTypeId,
           reasons: 'MILEAGE_VALID',
           status: 'Pending',
-          message: 'Existing service type has a valid warranty that overlaps with current mileage.'
+          message: 'Existing service type has a valid warranty that overlaps with current mileage.',
         });
 
         console.log(`Created warranty mileage overlap alert for line item ${lineItemId}`);
@@ -889,7 +1004,9 @@ export class LineItemService {
 
     const allowedStatuses = ['Draft', 'PendingAlertReview'];
     if (!allowedStatuses.includes(invoice.resource.status)) {
-      throw new Error(`Cannot modify line items for invoice with status '${invoice.resource.status}'. Allowed statuses: ${allowedStatuses.join(', ')}`);
+      throw new Error(
+        `Cannot modify line items for invoice with status '${invoice.resource.status}'. Allowed statuses: ${allowedStatuses.join(', ')}`
+      );
     }
   }
 

@@ -7,9 +7,9 @@ export interface QueryInvoiceDto {
   status?: InvoiceStatus;
   invoiceNumber?: string;
   orderStartDateFrom?: string; // ISO date string
-  orderStartDateTo?: string;   // ISO date string
-  uploadDateFrom?: string;     // ISO date string
-  uploadDateTo?: string;       // ISO date string
+  orderStartDateTo?: string; // ISO date string
+  uploadDateFrom?: string; // ISO date string
+  uploadDateTo?: string; // ISO date string
   minAmount?: number;
   maxAmount?: number;
   skip?: number;

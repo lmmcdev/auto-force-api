@@ -9,33 +9,31 @@ function nowIso() {
 }
 
 export class VehicleService {
-
   private get container() {
     return getVehiclesContainer();
   }
 
   async findAll(): Promise<Vehicle[]> {
-  const q: SqlQuerySpec = {
-    query: `SELECT * FROM c ORDER BY c.id`
-  };
-  const { resources } = await this.container.items.query<Vehicle>(q).fetchAll();
-  return resources;
-  
-}
-  async create(payload: Omit<Vehicle, "id" | "createdAt" | "updatedAt">): Promise<Vehicle> {
+    const q: SqlQuerySpec = {
+      query: `SELECT * FROM c ORDER BY c.id`,
+    };
+    const { resources } = await this.container.items.query<Vehicle>(q).fetchAll();
+    return resources;
+  }
+  async create(payload: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'>): Promise<Vehicle> {
     // Validaciones mínimas (ajusta según tu modelo real)
     console.log(payload.vin);
     console.log(payload.status);
     console.log(payload.make);
     console.log(payload.year);
-    if (!payload.vin?.trim()) throw new Error("vin is required");
-    if (!payload.status) throw new Error("status is required");
-    if (!payload.make) throw new Error("make is required");
-    if (!payload.year) throw new Error("year is required");
+    if (!payload.vin?.trim()) throw new Error('vin is required');
+    if (!payload.status) throw new Error('status is required');
+    if (!payload.make) throw new Error('make is required');
+    if (!payload.year) throw new Error('year is required');
 
     // Chequeo rápido de duplicado por VIN (opcional; ideal: unique key sobre /vin)
     const dup = await this.findByVin(payload.vin);
-    if (dup) throw new Error("vehicle with same VIN already exists");
+    if (dup) throw new Error('vehicle with same VIN already exists');
 
     const doc: Vehicle = {
       ...payload,
@@ -46,7 +44,7 @@ export class VehicleService {
 
     // items.create infiere la PK (si tu PK es /id y el documento tiene id)
     await this.container.items.create(doc);
-    
+
     return doc;
   }
 
@@ -61,7 +59,7 @@ export class VehicleService {
 
   async update(id: string, updates: Partial<Vehicle>): Promise<Vehicle> {
     const current = await this.getById(id);
-    if (!current) throw new Error("vehicle not found");
+    if (!current) throw new Error('vehicle not found');
 
     // Evita cambiar id
     const { id: _ignored, createdAt: _c, ...rest } = updates;
@@ -78,14 +76,14 @@ export class VehicleService {
 
   async delete(id: string): Promise<void> {
     const found = await this.getById(id);
-    if (!found) throw new Error("vehicle not found");
+    if (!found) throw new Error('vehicle not found');
     await this.container.item(id, id).delete();
   }
-  
-async findByVin(vin: string): Promise<Vehicle | null> {
+
+  async findByVin(vin: string): Promise<Vehicle | null> {
     const q: SqlQuerySpec = {
       query: `SELECT TOP 1 * FROM c WHERE c.vin = @vin`,
-      parameters: [{ name: "@vin", value: vin }],
+      parameters: [{ name: '@vin', value: vin }],
     };
     const { resources } = await this.container.items.query<Vehicle>(q).fetchAll();
     return resources[0] ?? null;
@@ -94,20 +92,20 @@ async findByVin(vin: string): Promise<Vehicle | null> {
   async findByTagNumber(tagNumber: string): Promise<Vehicle | null> {
     const q: SqlQuerySpec = {
       query: `SELECT TOP 1 * FROM c WHERE c.tagNumber = @tagNumber`,
-      parameters: [{ name: "@tagNumber", value: tagNumber }],
+      parameters: [{ name: '@tagNumber', value: tagNumber }],
     };
     const { resources } = await this.container.items.query<Vehicle>(q).fetchAll();
     return resources[0] ?? null;
   }
 
-  async findByStatus(status: "Active" | "Inactive"): Promise<Vehicle[]> {
+  async findByStatus(status: 'Active' | 'Inactive'): Promise<Vehicle[]> {
     const q: SqlQuerySpec = {
       query: `
         SELECT * FROM c
         WHERE c.status = @status
         ORDER BY c.id
       `,
-      parameters: [{ name: "@status", value: status }],
+      parameters: [{ name: '@status', value: status }],
     };
     const { resources } = await this.container.items.query<Vehicle>(q).fetchAll();
     return resources;
@@ -123,16 +121,17 @@ async findByVin(vin: string): Promise<Vehicle | null> {
         ORDER BY c.id
       `,
       parameters: [
-        { name: "@make", value: make },
-        { name: "@year", value: year },
+        { name: '@make', value: make },
+        { name: '@year', value: year },
       ],
     };
     const { resources } = await this.container.items.query<Vehicle>(q).fetchAll();
     return resources;
   }
 
-
-  async bulkImport(vehicles: Vehicle[]): Promise<{ success: Vehicle[]; errors: { item: any; error: string }[] }> {
+  async bulkImport(
+    vehicles: Vehicle[]
+  ): Promise<{ success: Vehicle[]; errors: { item: any; error: string }[] }> {
     const success: Vehicle[] = [];
     const errors: { item: any; error: string }[] = [];
 
@@ -188,7 +187,7 @@ async findByVin(vin: string): Promise<Vehicle | null> {
       } catch (error: any) {
         errors.push({
           item,
-          error: error.message || 'Failed to create vehicle'
+          error: error.message || 'Failed to create vehicle',
         });
       }
     }
@@ -199,6 +198,5 @@ async findByVin(vin: string): Promise<Vehicle | null> {
   private generateId(): string {
     return `veh_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-
 }
 export const vehicleService = new VehicleService();

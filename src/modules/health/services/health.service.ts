@@ -19,20 +19,20 @@ export class HealthService {
       environment: process.env.NODE_ENV || 'development',
       services: {
         database: await this.checkDatabaseHealth(),
-        api: 'healthy'
+        api: 'healthy',
       },
       memory: {
         used: Math.round(memoryUsage.heapUsed / 1024 / 1024),
         total: Math.round(memoryUsage.heapTotal / 1024 / 1024),
-        percentage: Math.round((memoryUsage.heapUsed / memoryUsage.heapTotal) * 100)
-      }
+        percentage: Math.round((memoryUsage.heapUsed / memoryUsage.heapTotal) * 100),
+      },
     };
   }
 
   async getSimpleHealthStatus(): Promise<{ status: string; timestamp: string }> {
     return {
       status: 'ok',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 
