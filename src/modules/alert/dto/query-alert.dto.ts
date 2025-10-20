@@ -16,4 +16,5 @@ export interface QueryAlertDto {
   createdFrom?: string; // ISO date string
   createdTo?: string; // ISO date string
   hasResolution?: boolean; // Filter by whether resolution exists
+  expirationDate?: string; // ISO date string
 }

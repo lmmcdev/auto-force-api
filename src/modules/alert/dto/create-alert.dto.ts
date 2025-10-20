@@ -12,4 +12,5 @@ export interface CreateAlertDto {
   status?: AlertStatus; // Defaults to 'Pending'
   message: string;
   resolution?: AlertResolution;
+  expirationDate?: string;
 }
