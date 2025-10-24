@@ -7,15 +7,16 @@ function nowIso() {
 }
 
 export class VehicleService {
-  private get container() {
-    return getVehiclesContainer();
+  private async getContainer() {
+    return await getVehiclesContainer();
   }
 
   async findAll(): Promise<Vehicle[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: `SELECT * FROM c ORDER BY c.id`,
     };
-    const { resources } = await this.container.items.query<Vehicle>(q).fetchAll();
+    const { resources } = await container.items.query<Vehicle>(q).fetchAll();
     return resources;
   }
   async create(payload: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'>): Promise<Vehicle> {
@@ -41,14 +42,16 @@ export class VehicleService {
     };
 
     // items.create infiere la PK (si tu PK es /id y el documento tiene id)
-    await this.container.items.create(doc);
+    const container = await this.getContainer();
+    await container.items.create(doc);
 
     return doc;
   }
 
   async getById(id: string): Promise<Vehicle | null> {
     try {
-      const { resource } = await this.container.item(id, id).read<Vehicle>();
+      const container = await this.getContainer();
+      const { resource } = await container.item(id, id).read<Vehicle>();
       return resource ?? null;
     } catch {
       return null;
@@ -68,35 +71,40 @@ export class VehicleService {
       updatedAt: nowIso(),
     };
 
-    await this.container.item(id, id).replace(next);
+    const container = await this.getContainer();
+    await container.item(id, id).replace(next);
     return next;
   }
 
   async delete(id: string): Promise<void> {
     const found = await this.getById(id);
     if (!found) throw new Error('vehicle not found');
-    await this.container.item(id, id).delete();
+    const container = await this.getContainer();
+    await container.item(id, id).delete();
   }
 
   async findByVin(vin: string): Promise<Vehicle | null> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: `SELECT TOP 1 * FROM c WHERE c.vin = @vin`,
       parameters: [{ name: '@vin', value: vin }],
     };
-    const { resources } = await this.container.items.query<Vehicle>(q).fetchAll();
+    const { resources } = await container.items.query<Vehicle>(q).fetchAll();
     return resources[0] ?? null;
   }
 
   async findByTagNumber(tagNumber: string): Promise<Vehicle | null> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: `SELECT TOP 1 * FROM c WHERE c.tagNumber = @tagNumber`,
       parameters: [{ name: '@tagNumber', value: tagNumber }],
     };
-    const { resources } = await this.container.items.query<Vehicle>(q).fetchAll();
+    const { resources } = await container.items.query<Vehicle>(q).fetchAll();
     return resources[0] ?? null;
   }
 
   async findByStatus(status: 'Active' | 'Inactive'): Promise<Vehicle[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: `
         SELECT * FROM c
@@ -105,12 +113,13 @@ export class VehicleService {
       `,
       parameters: [{ name: '@status', value: status }],
     };
-    const { resources } = await this.container.items.query<Vehicle>(q).fetchAll();
+    const { resources } = await container.items.query<Vehicle>(q).fetchAll();
     return resources;
   }
 
   async findByMakeAndYear(make: string, year: number): Promise<Vehicle[]> {
     // Usamos LOWER para hacer comparación case-insensitive en 'make'
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: `
         SELECT * FROM c
@@ -123,7 +132,7 @@ export class VehicleService {
         { name: '@year', value: year },
       ],
     };
-    const { resources } = await this.container.items.query<Vehicle>(q).fetchAll();
+    const { resources } = await container.items.query<Vehicle>(q).fetchAll();
     return resources;
   }
 
@@ -178,7 +187,8 @@ export class VehicleService {
           updatedAt: item.updatedAt || nowIso(),
         };
 
-        await this.container.items.create(doc);
+        const container = await this.getContainer();
+        await container.items.create(doc);
         success.push(doc);
       } catch (error) {
         errors.push({
