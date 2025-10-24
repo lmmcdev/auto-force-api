@@ -1,6 +1,6 @@
 export type AlertType = 'WARRANTY' | 'LICENSE' | 'PERMIT' | 'HIGHER_PRICE' | 'CERTIFICATION' | 'SAME_SERVICE' | string;
 
-export type AlertCategory = 'ServiceType' | 'DriverLicense' | string;
+export type AlertCategory = 'ServiceType' | 'DriverLicense' |'PermitVehicle'| string;
 
 export type AlertReasons =
   | 'DATE_VALID'
@@ -37,6 +37,7 @@ export interface Alert {
   createdAt: string;
   updatedAt: string;
   resolution?: AlertResolution;
+  expirationDate?: string;
 }
 
 export class AlertEntity implements Alert {
@@ -54,6 +55,7 @@ export class AlertEntity implements Alert {
   createdAt: string;
   updatedAt: string;
   resolution?: AlertResolution;
+  expirationDate?: string;
 
   constructor(alert: Partial<Alert> = {}) {
     this.id = alert.id || '';
@@ -70,5 +72,6 @@ export class AlertEntity implements Alert {
     this.createdAt = alert.createdAt || '';
     this.updatedAt = alert.updatedAt || '';
     this.resolution = alert.resolution;
+    this.expirationDate = alert.expirationDate;
   }
 }

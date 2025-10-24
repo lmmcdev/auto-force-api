@@ -29,20 +29,20 @@ function cleanUndefined<T>(obj: T): T {
 }
 
 export class InvoiceService {
-  private get container() {
-    return getInvoicesContainer();
+  private async getContainer() {
+    return await getInvoicesContainer();
   }
 
-  private get vehiclesContainer() {
-    return getVehiclesContainer();
+  private async getVehiclesContainer() {
+    return await getVehiclesContainer();
   }
 
-  private get vendorsContainer() {
-    return getVendorsContainer();
+  private async getVendorsContainer() {
+    return await getVendorsContainer();
   }
 
-  private get lineItemsContainer() {
-    return getLineItemsContainer();
+  private async getLineItemsContainer() {
+    return await getLineItemsContainer();
   }
 
   async create(payload: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Invoice> {
@@ -57,23 +57,26 @@ export class InvoiceService {
     }
 
     // Validate that vehicle exists
-    const vehicle = await this.vehiclesContainer.item(payload.vehicleId, payload.vehicleId).read();
+    const vehiclesContainer = await this.getVehiclesContainer();
+    const vehicle = await vehiclesContainer.item(payload.vehicleId, payload.vehicleId).read();
     if (!vehicle.resource) {
       throw new Error(`Vehicle with id '${payload.vehicleId}' not found`);
     }
 
     // Validate that vendor exists
-    const vendor = await this.vendorsContainer.item(payload.vendorId, payload.vendorId).read();
+    const vendorsContainer = await this.getVendorsContainer();
+    const vendor = await vendorsContainer.item(payload.vendorId, payload.vendorId).read();
     if (!vendor.resource) {
       throw new Error(`Vendor with id '${payload.vendorId}' not found`);
     }
 
     // Check for duplicate invoice number
+    const container = await this.getContainer();
     const query: SqlQuerySpec = {
       query: 'SELECT TOP 1 * FROM c WHERE c.invoiceNumber = @invoiceNumber',
       parameters: [{ name: '@invoiceNumber', value: payload.invoiceNumber }],
     };
-    const { resources } = await this.container.items.query<Invoice>(query).fetchAll();
+    const { resources } = await container.items.query<Invoice>(query).fetchAll();
     if (resources.length > 0) {
       throw new Error('invoice with same invoice number already exists');
     }
@@ -95,13 +98,14 @@ export class InvoiceService {
     };
 
     const cleanDoc = cleanUndefined(doc);
-    await this.container.items.create(cleanDoc);
+    await container.items.create(cleanDoc);
     return cleanDoc;
   }
 
   async getById(id: string): Promise<Invoice | null> {
     try {
-      const { resource } = await this.container.item(id, id).read<Invoice>();
+      const container = await this.getContainer();
+      const { resource } = await container.item(id, id).read<Invoice>();
       return resource ?? null;
     } catch {
       return null;
@@ -109,10 +113,11 @@ export class InvoiceService {
   }
 
   async findAll(): Promise<Invoice[]> {
+    const container = await this.getContainer();
     const query: SqlQuerySpec = {
       query: `SELECT * FROM c ORDER BY c.uploadDate DESC`,
     };
-    const { resources } = await this.container.items.query(query).fetchAll();
+    const { resources } = await container.items.query(query).fetchAll();
     return resources;
   }
 
@@ -184,8 +189,9 @@ export class InvoiceService {
       parameters: parameters,
     };
 
+    const container = await this.getContainer();
     try {
-      const { resources } = await this.container.items.query<Invoice>(q).fetchAll();
+      const { resources } = await container.items.query<Invoice>(q).fetchAll();
       const total = resources.length;
       const data = resources.slice(skip, skip + take);
 
@@ -196,7 +202,7 @@ export class InvoiceService {
       const fallbackQuery: SqlQuerySpec = {
         query: 'SELECT * FROM c ORDER BY c.uploadDate DESC',
       };
-      const { resources } = await this.container.items.query<Invoice>(fallbackQuery).fetchAll();
+      const { resources } = await container.items.query<Invoice>(fallbackQuery).fetchAll();
       const total = resources.length;
       const data = resources.slice(skip, skip + take);
 
@@ -223,7 +229,8 @@ export class InvoiceService {
 
     // Validate vehicle exists if changing vehicleId
     if (payload.vehicleId && payload.vehicleId !== current.vehicleId) {
-      const vehicle = await this.vehiclesContainer.item(payload.vehicleId, payload.vehicleId).read();
+      const vehiclesContainer = await this.getVehiclesContainer();
+      const vehicle = await vehiclesContainer.item(payload.vehicleId, payload.vehicleId).read();
       if (!vehicle.resource) {
         throw new Error(`Vehicle with id '${payload.vehicleId}' not found`);
       }
@@ -231,7 +238,8 @@ export class InvoiceService {
 
     // Validate vendor exists if changing vendorId
     if (payload.vendorId && payload.vendorId !== current.vendorId) {
-      const vendor = await this.vendorsContainer.item(payload.vendorId, payload.vendorId).read();
+      const vendorsContainer = await this.getVendorsContainer();
+      const vendor = await vendorsContainer.item(payload.vendorId, payload.vendorId).read();
       if (!vendor.resource) {
         throw new Error(`Vendor with id '${payload.vendorId}' not found`);
       }
@@ -258,7 +266,8 @@ export class InvoiceService {
       updatedAt: nowIso(),
     };
 
-    await this.container.item(id, id).replace(next);
+    const container = await this.getContainer();
+    await container.item(id, id).replace(next);
 
     // Update line items' vehicleId and vendorId if they changed
     if (vehicleIdChanged || vendorIdChanged) {
@@ -280,46 +289,51 @@ export class InvoiceService {
   async delete(id: string): Promise<void> {
     const found = await this.getById(id);
     if (!found) throw new Error('invoice not found');
-    await this.container.item(id, id).delete();
+    const container = await this.getContainer();
+    await container.item(id, id).delete();
   }
 
   // Find by invoice number
   async findByInvoiceNumber(invoiceNumber: string): Promise<Invoice | null> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: 'SELECT TOP 1 * FROM c WHERE c.invoiceNumber = @invoiceNumber',
       parameters: [{ name: '@invoiceNumber', value: invoiceNumber }],
     };
-    const { resources } = await this.container.items.query<Invoice>(q).fetchAll();
+    const { resources } = await container.items.query<Invoice>(q).fetchAll();
     return resources[0] ?? null;
   }
 
   // Find by vehicle ID
   async findByVehicleId(vehicleId: string): Promise<Invoice[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.vehicleId = @vehicleId ORDER BY c.uploadDate DESC',
       parameters: [{ name: '@vehicleId', value: vehicleId }],
     };
-    const { resources } = await this.container.items.query<Invoice>(q).fetchAll();
+    const { resources } = await container.items.query<Invoice>(q).fetchAll();
     return resources;
   }
 
   // Find by vendor ID
   async findByVendorId(vendorId: string): Promise<Invoice[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.vendorId = @vendorId ORDER BY c.uploadDate DESC',
       parameters: [{ name: '@vendorId', value: vendorId }],
     };
-    const { resources } = await this.container.items.query<Invoice>(q).fetchAll();
+    const { resources } = await container.items.query<Invoice>(q).fetchAll();
     return resources;
   }
 
   // Find by status
   async findByStatus(status: InvoiceStatus): Promise<Invoice[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.status = @status ORDER BY c.uploadDate DESC',
       parameters: [{ name: '@status', value: status }],
     };
-    const { resources } = await this.container.items.query<Invoice>(q).fetchAll();
+    const { resources } = await container.items.query<Invoice>(q).fetchAll();
     return resources;
   }
 
@@ -380,7 +394,8 @@ export class InvoiceService {
         };
 
         const cleanDoc = cleanUndefined(doc);
-        await this.container.items.create(cleanDoc);
+        const container = await this.getContainer();
+        await container.items.create(cleanDoc);
         success.push(cleanDoc);
       } catch (error: unknown) {
         errors.push({
@@ -396,12 +411,13 @@ export class InvoiceService {
   // Update all line items' vehicleId and vendorId fields when invoice changes
   async updateLineItemsFields(id: string, vehicleId?: string, vendorId?: string): Promise<void> {
     // Get all line items for this invoice
+    const lineItemsContainer = await this.getLineItemsContainer();
     const lineItemsQuery: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.invoiceId = @invoiceId',
       parameters: [{ name: '@invoiceId', value: id }],
     };
 
-    const { resources: lineItems } = await this.lineItemsContainer.items.query(lineItemsQuery).fetchAll();
+    const { resources: lineItems } = await lineItemsContainer.items.query(lineItemsQuery).fetchAll();
 
     // Update each line item if vehicleId or vendorId was provided
     for (const lineItem of lineItems) {
@@ -420,7 +436,7 @@ export class InvoiceService {
 
       if (needsUpdate) {
         updatedLineItem.updatedAt = nowIso();
-        await this.lineItemsContainer.item(lineItem.id, lineItem.id).replace(updatedLineItem);
+        await lineItemsContainer.item(lineItem.id, lineItem.id).replace(updatedLineItem);
       }
     }
   }
@@ -434,12 +450,13 @@ export class InvoiceService {
     }
 
     // Get all line items for this invoice
+    const lineItemsContainer = await this.getLineItemsContainer();
     const lineItemsQuery: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.invoiceId = @invoiceId',
       parameters: [{ name: '@invoiceId', value: id }],
     };
 
-    const { resources: lineItems } = await this.lineItemsContainer.items.query(lineItemsQuery).fetchAll();
+    const { resources: lineItems } = await lineItemsContainer.items.query(lineItemsQuery).fetchAll();
 
     // Calculate subTotal from all line items
     const subTotal = lineItems.reduce((sum, lineItem) => {
@@ -475,7 +492,8 @@ export class InvoiceService {
     };
 
     // Save the updated invoice
-    await this.container.item(id, id).replace(updatedInvoice);
+    const container = await this.getContainer();
+    await container.item(id, id).replace(updatedInvoice);
 
     return updatedInvoice;
   }
@@ -512,7 +530,8 @@ export class InvoiceService {
       updatedAt: nowIso(),
     };
 
-    await this.container.item(id, id).replace(updatedInvoice);
+    const container1 = await this.getContainer();
+    await container1.item(id, id).replace(updatedInvoice);
     return updatedInvoice;
   }
 
@@ -530,7 +549,8 @@ export class InvoiceService {
       updatedAt: nowIso(),
     };
 
-    await this.container.item(id, id).replace(updatedInvoice);
+    const container2 = await this.getContainer();
+    await container2.item(id, id).replace(updatedInvoice);
     return updatedInvoice;
   }
 

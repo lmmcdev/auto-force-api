@@ -26,16 +26,16 @@ function cleanUndefined<T>(obj: T): T {
 }
 
 export class LineItemService {
-  private get container() {
-    return getLineItemsContainer();
+  private async getContainer() {
+    return await getLineItemsContainer();
   }
 
-  private get invoicesContainer() {
-    return getInvoicesContainer();
+  private async getInvoicesContainer() {
+    return await getInvoicesContainer();
   }
 
-  private get serviceTypesContainer() {
-    return getServiceTypesContainer();
+  private async getServiceTypesContainer() {
+    return await getServiceTypesContainer();
   }
 
   async create(payload: Omit<LineItem, 'id' | 'totalPrice' | 'createdAt' | 'updatedAt'>): Promise<LineItem> {
@@ -51,7 +51,8 @@ export class LineItemService {
 
     // Validate that service-type exists
     try {
-      const serviceType = await this.serviceTypesContainer.item(payload.serviceTypeId, payload.serviceTypeId).read();
+      const serviceTypesContainer = await this.getServiceTypesContainer();
+      const serviceType = await serviceTypesContainer.item(payload.serviceTypeId, payload.serviceTypeId).read();
       if (!serviceType.resource) {
         throw new Error(`Service type with id '${payload.serviceTypeId}' not found`);
       }
@@ -62,7 +63,8 @@ export class LineItemService {
     // Validate that invoice exists and get vehicleId/vendorId
     let invoiceData;
     try {
-      const invoice = await this.invoicesContainer.item(payload.invoiceId, payload.invoiceId).read();
+      const invoicesContainer = await this.getInvoicesContainer();
+      const invoice = await invoicesContainer.item(payload.invoiceId, payload.invoiceId).read();
       if (!invoice.resource) {
         throw new Error(`Invoice with id '${payload.invoiceId}' not found`);
       }
@@ -100,7 +102,8 @@ export class LineItemService {
     };
 
     const cleanDoc = cleanUndefined(doc);
-    await this.container.items.create(cleanDoc);
+    const container = await this.getContainer();
+    await container.items.create(cleanDoc);
 
     // Update the invoice amount automatically
     try {
@@ -147,7 +150,8 @@ export class LineItemService {
 
   async getById(id: string): Promise<LineItem | null> {
     try {
-      const { resource } = await this.container.item(id, id).read<LineItem>();
+      const container = await this.getContainer();
+      const { resource } = await container.item(id, id).read<LineItem>();
       return resource ?? null;
     } catch {
       return null;
@@ -155,10 +159,11 @@ export class LineItemService {
   }
 
   async findAll(): Promise<LineItem[]> {
+    const container = await this.getContainer();
     const query: SqlQuerySpec = {
       query: `SELECT * FROM c ORDER BY c.createdAt DESC`,
     };
-    const { resources } = await this.container.items.query(query).fetchAll();
+    const { resources } = await container.items.query(query).fetchAll();
     return resources;
   }
 
@@ -245,8 +250,9 @@ export class LineItemService {
       parameters: parameters,
     };
 
+    const container = await this.getContainer();
     try {
-      const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+      const { resources } = await container.items.query<LineItem>(q).fetchAll();
       const total = resources.length;
       const data = resources.slice(skip, skip + take);
 
@@ -257,7 +263,7 @@ export class LineItemService {
       const fallbackQuery: SqlQuerySpec = {
         query: 'SELECT * FROM c ORDER BY c.createdAt DESC',
       };
-      const { resources } = await this.container.items.query<LineItem>(fallbackQuery).fetchAll();
+      const { resources } = await container.items.query<LineItem>(fallbackQuery).fetchAll();
       const total = resources.length;
       const data = resources.slice(skip, skip + take);
 
@@ -278,7 +284,8 @@ export class LineItemService {
     // Validate service-type exists if changing serviceTypeId
     if (payload.serviceTypeId && payload.serviceTypeId !== current.serviceTypeId) {
       try {
-        const serviceType = await this.serviceTypesContainer.item(payload.serviceTypeId, payload.serviceTypeId).read();
+        const serviceTypesContainer = await this.getServiceTypesContainer();
+        const serviceType = await serviceTypesContainer.item(payload.serviceTypeId, payload.serviceTypeId).read();
         if (!serviceType.resource) {
           throw new Error(`Service type with id '${payload.serviceTypeId}' not found`);
         }
@@ -291,7 +298,8 @@ export class LineItemService {
     let newInvoiceData;
     if (payload.invoiceId && payload.invoiceId !== current.invoiceId) {
       try {
-        const invoice = await this.invoicesContainer.item(payload.invoiceId, payload.invoiceId).read();
+        const invoicesContainer = await this.getInvoicesContainer();
+        const invoice = await invoicesContainer.item(payload.invoiceId, payload.invoiceId).read();
         if (!invoice.resource) {
           throw new Error(`Invoice with id '${payload.invoiceId}' not found`);
         }
@@ -339,7 +347,8 @@ export class LineItemService {
       updatedAt: nowIso(),
     };
 
-    await this.container.item(id, id).replace(next);
+    const container = await this.getContainer();
+    await container.item(id, id).replace(next);
 
     // Update invoice amounts if necessary
     if (totalPriceChanged || invoiceIdChanged || taxableChanged) {
@@ -403,7 +412,8 @@ export class LineItemService {
     await this.deleteAlertsForLineItem(id);
 
     const invoiceId = found.invoiceId;
-    await this.container.item(id, id).delete();
+    const container = await this.getContainer();
+    await container.item(id, id).delete();
 
     // Update the invoice amount after deleting the line item
     try {
@@ -416,51 +426,56 @@ export class LineItemService {
 
   // Find by invoice ID
   async findByInvoiceId(invoiceId: string): Promise<LineItem[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.invoiceId = @invoiceId ORDER BY c.createdAt ASC',
       parameters: [{ name: '@invoiceId', value: invoiceId }],
     };
-    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    const { resources } = await container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
   // Find by service type ID
   async findByServiceTypeId(serviceTypeId: string): Promise<LineItem[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId ORDER BY c.createdAt DESC',
       parameters: [{ name: '@serviceTypeId', value: serviceTypeId }],
     };
-    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    const { resources } = await container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
   // Find by type (Parts or Labor)
   async findByType(type: LineItemType): Promise<LineItem[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.type = @type ORDER BY c.createdAt DESC',
       parameters: [{ name: '@type', value: type }],
     };
-    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    const { resources } = await container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
   // Find taxable items
   async findTaxable(taxable: boolean): Promise<LineItem[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.taxable = @taxable ORDER BY c.createdAt DESC',
       parameters: [{ name: '@taxable', value: taxable }],
     };
-    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    const { resources } = await container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
   // Find warranty items
   async findWithWarranty(warranty: boolean): Promise<LineItem[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.warranty = @warranty ORDER BY c.createdAt DESC',
       parameters: [{ name: '@warranty', value: warranty }],
     };
-    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    const { resources } = await container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
@@ -470,6 +485,7 @@ export class LineItemService {
     type: LineItemType,
     unitPrice: number
   ): Promise<LineItem[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query:
         'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.unitPrice = @unitPrice ORDER BY c.unitPrice DESC',
@@ -479,7 +495,7 @@ export class LineItemService {
         { name: '@unitPrice', value: unitPrice },
       ],
     };
-    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    const { resources } = await container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
@@ -490,6 +506,7 @@ export class LineItemService {
     unitPrice: number,
     vehicleId: string
   ): Promise<LineItem[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query:
         'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.unitPrice < @unitPrice AND c.vehicleId = @vehicleId ORDER BY c.unitPrice ASC',
@@ -500,7 +517,7 @@ export class LineItemService {
         { name: '@vehicleId', value: vehicleId },
       ],
     };
-    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    const { resources } = await container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
@@ -510,6 +527,7 @@ export class LineItemService {
     type: LineItemType,
     vehicleId: string
   ): Promise<LineItem[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query:
         'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.vehicleId = @vehicleId ORDER BY c.unitPrice ASC',
@@ -519,7 +537,7 @@ export class LineItemService {
         { name: '@vehicleId', value: vehicleId },
       ],
     };
-    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    const { resources } = await container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
@@ -529,6 +547,7 @@ export class LineItemService {
     type: LineItemType,
     vehicleId: string
   ): Promise<LineItem[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query:
         'SELECT * FROM c WHERE c.serviceTypeId = @serviceTypeId AND c.type = @type AND c.vehicleId = @vehicleId AND c.warranty = true ORDER BY c.unitPrice ASC',
@@ -538,7 +557,7 @@ export class LineItemService {
         { name: '@vehicleId', value: vehicleId },
       ],
     };
-    const { resources } = await this.container.items.query<LineItem>(q).fetchAll();
+    const { resources } = await container.items.query<LineItem>(q).fetchAll();
     return resources;
   }
 
@@ -691,7 +710,8 @@ export class LineItemService {
         // Get invoice data to auto-populate vehicleId and vendorId
         let invoiceData;
         try {
-          const invoice = await this.invoicesContainer.item(item.invoiceId, item.invoiceId).read();
+          const invoicesContainer = await this.getInvoicesContainer();
+          const invoice = await invoicesContainer.item(item.invoiceId, item.invoiceId).read();
           if (!invoice.resource) {
             errors.push({ item, error: `Invoice with id '${item.invoiceId}' not found` });
             continue;
@@ -739,7 +759,8 @@ export class LineItemService {
         };
 
         const cleanDoc = cleanUndefined(doc);
-        await this.container.items.create(cleanDoc);
+        const container = await this.getContainer();
+        await container.items.create(cleanDoc);
         success.push(cleanDoc);
 
         /*
@@ -819,6 +840,7 @@ export class LineItemService {
       }
 
       // Search for line items with overlapping warranty
+      const container = await this.getContainer();
       const warrantyQuery: SqlQuerySpec = {
         query: `SELECT * FROM c WHERE c.id != @lineItemId
                 AND c.vehicleId = @vehicleId
@@ -834,7 +856,7 @@ export class LineItemService {
         ],
       };
 
-      const { resources: overlappingWarranties } = await this.container.items.query(warrantyQuery).fetchAll();
+      const { resources: overlappingWarranties } = await container.items.query(warrantyQuery).fetchAll();
 
       // If overlapping warranties exist, create an alert
       if (overlappingWarranties.length > 0) {
@@ -873,6 +895,7 @@ export class LineItemService {
   ): Promise<void> {
     try {
       // Search for line items with overlapping warranty mileage
+      const container = await this.getContainer();
       const warrantyMileageQuery: SqlQuerySpec = {
         query: `SELECT * FROM c WHERE c.id != @lineItemId
                 AND c.vehicleId = @vehicleId
@@ -889,7 +912,7 @@ export class LineItemService {
         ],
       };
 
-      const { resources: overlappingWarranties } = await this.container.items.query(warrantyMileageQuery).fetchAll();
+      const { resources: overlappingWarranties } = await container.items.query(warrantyMileageQuery).fetchAll();
 
       // If overlapping warranties exist, create an alert
       if (overlappingWarranties.length > 0) {
@@ -946,7 +969,8 @@ export class LineItemService {
 
   // Helper method to validate invoice status for line item operations
   private async validateInvoiceStatus(invoiceId: string): Promise<void> {
-    const invoice = await this.invoicesContainer.item(invoiceId, invoiceId).read();
+    const invoicesContainer = await this.getInvoicesContainer();
+    const invoice = await invoicesContainer.item(invoiceId, invoiceId).read();
     if (!invoice.resource) {
       throw new Error(`Invoice with id '${invoiceId}' not found`);
     }

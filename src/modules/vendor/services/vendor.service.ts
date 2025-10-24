@@ -28,8 +28,8 @@ function cleanUndefined<T>(obj: T): T {
 }
 
 export class VendorService {
-  private get container() {
-    return getVendorsContainer();
+  private async getContainer() {
+    return await getVendorsContainer();
   }
 
   async create(payload: Omit<Vendor, 'id' | 'createdAt' | 'updatedAt'>): Promise<Vendor> {
@@ -40,7 +40,8 @@ export class VendorService {
       query: 'SELECT TOP 1 * FROM c WHERE LOWER(c.name) = LOWER(@name)',
       parameters: [{ name: '@name', value: payload.name }],
     };
-    const { resources } = await this.container.items.query<Vendor>(query).fetchAll();
+    const container = await this.getContainer();
+    const { resources } = await container.items.query<Vendor>(query).fetchAll();
     if (resources.length > 0) {
       throw new Error('vendor with same name already exists');
     }
@@ -59,23 +60,25 @@ export class VendorService {
 
     // partitionKey = id (porque definimos /id)
     const cleanDoc = cleanUndefined(doc);
-    await this.container.items.create(cleanDoc);
+    await container.items.create(cleanDoc);
     return cleanDoc;
   }
 
   async getById(id: string): Promise<Vendor | null> {
     try {
-      const { resource } = await this.container.item(id, id).read<Vendor>();
+      const container = await this.getContainer();
+      const { resource } = await container.item(id, id).read<Vendor>();
       return resource ?? null;
     } catch {
       return null;
     }
   }
   async findAll(): Promise<Vendor[]> {
+    const container = await this.getContainer();
     const query: SqlQuerySpec = {
       query: `SELECT * FROM c ORDER BY c.id`,
     };
-    const { resources } = await this.container.items.query(query).fetchAll();
+    const { resources } = await container.items.query(query).fetchAll();
     return resources;
   }
 
@@ -107,8 +110,9 @@ export class VendorService {
       parameters: parameters,
     };
 
+    const container = await this.getContainer();
     try {
-      const { resources } = await this.container.items.query<Vendor>(q).fetchAll();
+      const { resources } = await container.items.query<Vendor>(q).fetchAll();
       const total = resources.length;
       const data = resources.slice(skip, skip + take);
 
@@ -119,7 +123,7 @@ export class VendorService {
       const fallbackQuery: SqlQuerySpec = {
         query: 'SELECT * FROM c ORDER BY c.name',
       };
-      const { resources } = await this.container.items.query<Vendor>(fallbackQuery).fetchAll();
+      const { resources } = await container.items.query<Vendor>(fallbackQuery).fetchAll();
       const total = resources.length;
       const data = resources.slice(skip, skip + take);
 
@@ -146,7 +150,8 @@ export class VendorService {
       updatedAt: nowIso(),
     };
 
-    await this.container.item(id, id).replace(next);
+    const container = await this.getContainer();
+    await container.item(id, id).replace(next);
     return next;
   }
 
@@ -154,7 +159,8 @@ export class VendorService {
     // Si no existe, lanzará 404 → lo tratamos como error de negocio
     const found = await this.getById(id);
     if (!found) throw new Error('vendor not found');
-    await this.container.item(id, id).delete();
+    const container = await this.getContainer();
+    await container.item(id, id).delete();
   }
 
   private generateId(): string {
@@ -163,6 +169,7 @@ export class VendorService {
 
   // Buscar vendors por status
   async findByStatus(status: 'Active' | 'Inactive'): Promise<Vendor[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: `
         SELECT * FROM c
@@ -172,12 +179,13 @@ export class VendorService {
       parameters: [{ name: '@status', value: status }],
     };
 
-    const { resources } = await this.container.items.query<Vendor>(q).fetchAll();
+    const { resources } = await container.items.query<Vendor>(q).fetchAll();
     return resources;
   }
 
   // Buscar vendors por status Y type
   async findByStatusAndType(status: VendorStatus, type: VendorType): Promise<Vendor[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: `
         SELECT * FROM c
@@ -190,7 +198,7 @@ export class VendorService {
       ],
     };
 
-    const { resources } = await this.container.items.query<Vendor>(q).fetchAll();
+    const { resources } = await container.items.query<Vendor>(q).fetchAll();
     return resources;
   }
 
@@ -238,7 +246,8 @@ export class VendorService {
         };
 
         const cleanDoc = cleanUndefined(doc);
-        await this.container.items.create(cleanDoc);
+        const container = await this.getContainer();
+        await container.items.create(cleanDoc);
         success.push(cleanDoc);
       } catch (error) {
         errors.push({

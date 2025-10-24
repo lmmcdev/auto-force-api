@@ -12,4 +12,5 @@ export interface UpdateAlertDto {
   status?: AlertStatus;
   message?: string;
   resolution?: AlertResolution;
+  expirationDate?: string;
 }

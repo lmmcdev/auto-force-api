@@ -24,8 +24,8 @@ function cleanUndefined<T>(obj: T): T {
 }
 
 export class ServiceTypeService {
-  private get container() {
-    return getServiceTypesContainer();
+  private async getContainer() {
+    return await getServiceTypesContainer();
   }
 
   async create(payload: Omit<ServiceType, 'id' | 'createdAt' | 'updatedAt'>): Promise<ServiceType> {
@@ -36,7 +36,8 @@ export class ServiceTypeService {
       query: 'SELECT TOP 1 * FROM c WHERE LOWER(c.name) = LOWER(@name)',
       parameters: [{ name: '@name', value: payload.name }],
     };
-    const { resources } = await this.container.items.query<ServiceType>(query).fetchAll();
+    const container = await this.getContainer();
+    const { resources } = await container.items.query<ServiceType>(query).fetchAll();
     if (resources.length > 0) {
       throw new Error('service type with same name already exists');
     }
@@ -53,13 +54,14 @@ export class ServiceTypeService {
 
     // partitionKey = id (porque definimos /id)
     const cleanDoc = cleanUndefined(doc);
-    await this.container.items.create(cleanDoc);
+    await container.items.create(cleanDoc);
     return cleanDoc;
   }
 
   async getById(id: string): Promise<ServiceType | null> {
     try {
-      const { resource } = await this.container.item(id, id).read<ServiceType>();
+      const container = await this.getContainer();
+      const { resource } = await container.item(id, id).read<ServiceType>();
       return resource ?? null;
     } catch {
       return null;
@@ -67,10 +69,11 @@ export class ServiceTypeService {
   }
 
   async findAll(): Promise<ServiceType[]> {
+    const container = await this.getContainer();
     const query: SqlQuerySpec = {
       query: `SELECT * FROM c ORDER BY c.name`,
     };
-    const { resources } = await this.container.items.query(query).fetchAll();
+    const { resources } = await container.items.query(query).fetchAll();
     return resources;
   }
 
@@ -102,8 +105,9 @@ export class ServiceTypeService {
       parameters: parameters,
     };
 
+    const container = await this.getContainer();
     try {
-      const { resources } = await this.container.items.query<ServiceType>(q).fetchAll();
+      const { resources } = await container.items.query<ServiceType>(q).fetchAll();
       const total = resources.length;
       const data = resources.slice(skip, skip + take);
 
@@ -114,7 +118,7 @@ export class ServiceTypeService {
       const fallbackQuery: SqlQuerySpec = {
         query: 'SELECT * FROM c ORDER BY c.name',
       };
-      const { resources } = await this.container.items.query<ServiceType>(fallbackQuery).fetchAll();
+      const { resources } = await container.items.query<ServiceType>(fallbackQuery).fetchAll();
       const total = resources.length;
       const data = resources.slice(skip, skip + take);
 
@@ -141,7 +145,8 @@ export class ServiceTypeService {
       updatedAt: nowIso(),
     };
 
-    await this.container.item(id, id).replace(next);
+    const container = await this.getContainer();
+    await container.item(id, id).replace(next);
     return next;
   }
 
@@ -149,11 +154,13 @@ export class ServiceTypeService {
     // Si no existe, lanzará 404 → lo tratamos como error de negocio
     const found = await this.getById(id);
     if (!found) throw new Error('service type not found');
-    await this.container.item(id, id).delete();
+    const container = await this.getContainer();
+    await container.item(id, id).delete();
   }
 
   // Buscar service types por status
   async findByStatus(status: ServiceTypeStatus): Promise<ServiceType[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: `
         SELECT * FROM c
@@ -163,12 +170,13 @@ export class ServiceTypeService {
       parameters: [{ name: '@status', value: status }],
     };
 
-    const { resources } = await this.container.items.query<ServiceType>(q).fetchAll();
+    const { resources } = await container.items.query<ServiceType>(q).fetchAll();
     return resources;
   }
 
   // Buscar service types por type
   async findByType(type: ServiceTypeType): Promise<ServiceType[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: `
         SELECT * FROM c
@@ -178,12 +186,13 @@ export class ServiceTypeService {
       parameters: [{ name: '@type', value: type }],
     };
 
-    const { resources } = await this.container.items.query<ServiceType>(q).fetchAll();
+    const { resources } = await container.items.query<ServiceType>(q).fetchAll();
     return resources;
   }
 
   // Buscar service types por status Y type
   async findByStatusAndType(status: ServiceTypeStatus, type: ServiceTypeType): Promise<ServiceType[]> {
+    const container = await this.getContainer();
     const q: SqlQuerySpec = {
       query: `
         SELECT * FROM c
@@ -196,7 +205,7 @@ export class ServiceTypeService {
       ],
     };
 
-    const { resources } = await this.container.items.query<ServiceType>(q).fetchAll();
+    const { resources } = await container.items.query<ServiceType>(q).fetchAll();
     return resources;
   }
 
@@ -237,7 +246,8 @@ export class ServiceTypeService {
         };
 
         const cleanDoc = cleanUndefined(doc);
-        await this.container.items.create(cleanDoc);
+        const container = await this.getContainer();
+        await container.items.create(cleanDoc);
         success.push(cleanDoc);
       } catch (error: unknown) {
         errors.push({
