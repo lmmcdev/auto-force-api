@@ -5,6 +5,7 @@ import { ServiceTypeModule } from './modules/service-type/service-type.module';
 import { InvoiceModule } from './modules/invoice/invoice.module';
 import { LineItemModule } from './modules/line-item/line-item.module';
 import { AlertModule } from './modules/alert/alert.module';
+import { DocumentModule } from './modules/document/document.module';
 
 export class AppModule {
   private vehicleModule: VehicleModule;
@@ -14,6 +15,7 @@ export class AppModule {
   private invoiceModule: InvoiceModule;
   private lineItemModule: LineItemModule;
   private alertModule: AlertModule;
+  private documentModule: DocumentModule;
 
   constructor() {
     this.vehicleModule = new VehicleModule();
@@ -23,6 +25,7 @@ export class AppModule {
     this.invoiceModule = new InvoiceModule();
     this.lineItemModule = new LineItemModule();
     this.alertModule = new AlertModule();
+    this.documentModule = new DocumentModule();
   }
 
   getVehicleModule(): VehicleModule {
@@ -52,6 +55,10 @@ export class AppModule {
     return this.alertModule;
   }
 
+  getDocumentModule(): DocumentModule {
+    return this.documentModule;
+  }
+
   getModules() {
     return {
       vehicle: this.vehicleModule,
@@ -61,6 +68,7 @@ export class AppModule {
       invoice: this.invoiceModule,
       lineItem: this.lineItemModule,
       alert: this.alertModule,
+      document: this.documentModule,
     };
   }
 }
