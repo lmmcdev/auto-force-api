@@ -1,4 +1,11 @@
-import { AlertType, AlertCategory, AlertReasons, AlertStatus, AlertResolution, AlertSubcategory } from '../entities/alert.entity';
+import {
+  AlertType,
+  AlertCategory,
+  AlertReasons,
+  AlertStatus,
+  AlertResolution,
+  AlertSubcategory,
+} from '../entities/alert.entity';
 
 export interface CreateAlertDto {
   type: AlertType;

@@ -497,5 +497,3 @@ app.http('bulkImportAlerts', {
   route: 'v1/alerts/import',
   handler: bulkImportAlerts,
 });
-
-

@@ -4,10 +4,10 @@
  */
 
 // Import controller to register Azure Functions
-import "./controllers/document.controller";
+import './controllers/document.controller';
 
-import { DocumentController } from "./controllers/document.controller";
-import { DocumentService } from "./services/document.service";
+import { DocumentController } from './controllers/document.controller';
+import { DocumentService } from './services/document.service';
 
 export class DocumentModule {
   private documentService: DocumentService;
@@ -27,9 +27,9 @@ export class DocumentModule {
   }
 }
 
-export { Document, DocumentType, File, DocumentEntity } from "./entities/document.entity";
-export { CreateDocumentDto } from "./dto/create-document.dto";
-export { UpdateDocumentDto } from "./dto/update-document.dto";
-export { QueryDocumentDto } from "./dto/query-document.dto";
-export { DocumentService, documentService } from "./services/document.service";
-export { DocumentController, documentController } from "./controllers/document.controller";
+export { Document, DocumentType, File, DocumentEntity } from './entities/document.entity';
+export { CreateDocumentDto } from './dto/create-document.dto';
+export { UpdateDocumentDto } from './dto/update-document.dto';
+export { QueryDocumentDto } from './dto/query-document.dto';
+export { DocumentService, documentService } from './services/document.service';
+export { DocumentController, documentController } from './controllers/document.controller';
