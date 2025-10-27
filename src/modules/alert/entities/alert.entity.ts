@@ -2,6 +2,8 @@ export type AlertType = 'WARRANTY' | 'LICENSE' | 'PERMIT' | 'HIGHER_PRICE' | 'CE
 
 export type AlertCategory = 'ServiceType' | 'DriverLicense' |'PermitVehicle'| string;
 
+export type AlertSubcategory = 'Insurance' | 'Tag' | 'Annual Inspection' | 'Registration' |  string;
+
 export type AlertReasons =
   | 'DATE_VALID'
   | 'MILEAGE_VALID'
@@ -26,6 +28,7 @@ export interface Alert {
   id: string;
   type: AlertType;
   category: AlertCategory;
+  subcategory?: AlertSubcategory;
   vehicleId?: string;
   lineItemId?: string;
   invoiceId?: string;
@@ -56,6 +59,7 @@ export class AlertEntity implements Alert {
   updatedAt: string;
   resolution?: AlertResolution;
   expirationDate?: string;
+  subcategory?: AlertSubcategory;
 
   constructor(alert: Partial<Alert> = {}) {
     this.id = alert.id || '';
@@ -73,5 +77,6 @@ export class AlertEntity implements Alert {
     this.updatedAt = alert.updatedAt || '';
     this.resolution = alert.resolution;
     this.expirationDate = alert.expirationDate;
+    this.subcategory = alert.subcategory;
   }
 }

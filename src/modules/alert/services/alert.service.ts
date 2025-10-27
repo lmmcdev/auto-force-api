@@ -41,6 +41,7 @@ export class AlertService {
       id: this.generateId(),
       type: payload.type.trim(),
       category: payload.category.trim(),
+      subcategory: payload.subcategory?.trim(),
       vehicleId: payload.vehicleId?.trim(),
       lineItemId: payload.lineItemId?.trim(),
       invoiceId: payload.invoiceId?.trim(),
@@ -50,6 +51,7 @@ export class AlertService {
       status: payload.status || 'Pending',
       message: payload.message.trim(),
       resolution: payload.resolution,
+      expirationDate: payload.expirationDate,
       createdAt: nowIso(),
       updatedAt: nowIso(),
     };
@@ -378,6 +380,74 @@ export class AlertService {
     const q: SqlQuerySpec = {
       query: 'SELECT * FROM c WHERE c.validLineItem = @validLineItem ORDER BY c.createdAt DESC',
       parameters: [{ name: '@validLineItem', value: validLineItem }],
+    };
+    const { resources } = await container.items.query<Alert>(q).fetchAll();
+    return resources;
+  }
+
+  // Find by vehicle ID, type, category, reasons, subcategory, and expiration date
+  async findByVehicleIdAndTypeAndCategoryAndReasonsAndSubcategoryAndExpirationDate(
+    vehicleId: string,
+    type: AlertType,
+    category: AlertCategory,
+    reasons: AlertReasons,
+    subcategory?: string,
+    expirationDate?: string
+  ): Promise<Alert[]> {
+    const container = await this.getContainer();
+
+    // Build dynamic query based on provided parameters
+    let queryString = 'SELECT * FROM c WHERE c.vehicleId = @vehicleId AND c.type = @type AND c.category = @category AND c.reasons = @reasons';
+    const parameters: { name: string; value: string }[] = [
+      { name: '@vehicleId', value: vehicleId },
+      { name: '@type', value: type },
+      { name: '@category', value: category },
+      { name: '@reasons', value: reasons },
+    ];
+
+    // Add optional subcategory filter
+    if (subcategory !== undefined && subcategory !== null) {
+      queryString += ' AND c.subcategory = @subcategory';
+      parameters.push({ name: '@subcategory', value: subcategory });
+    }
+
+    // Add optional expirationDate filter
+    if (expirationDate !== undefined && expirationDate !== null) {
+      queryString += ' AND c.expirationDate = @expirationDate';
+      parameters.push({ name: '@expirationDate', value: expirationDate });
+    }
+
+    queryString += ' ORDER BY c.createdAt DESC';
+
+    const q: SqlQuerySpec = {
+      query: queryString,
+      parameters: parameters,
+    };
+
+    const { resources } = await container.items.query<Alert>(q).fetchAll();
+    return resources;
+  }
+
+  // Find PERMIT alerts by expiration date range
+  async findPermitAlertsByExpirationDateRange(startDate: string, endDate: string): Promise<Alert[]> {
+    const container = await this.getContainer();
+    const q: SqlQuerySpec = {
+      query: `
+        SELECT * FROM c
+        WHERE c.type = @type
+          AND c.category = @category
+          AND c.reasons = @reasons
+          AND c.expirationDate >= @startDate
+          AND c.expirationDate <= @endDate
+        ORDER BY c.expirationDate ASC
+      `,
+      parameters: [
+        { name: '@type', value: 'PERMIT' },
+        { name: '@category', value: 'PermitVehicle' },
+        { name: '@reasons', value: 'Expiration Date' },
+        { name: '@startDate', value: startDate },
+        { name: '@endDate', value: endDate },
+      ],
     };
     const { resources } = await container.items.query<Alert>(q).fetchAll();
     return resources;

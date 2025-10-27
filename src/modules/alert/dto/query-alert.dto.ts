@@ -1,4 +1,4 @@
-import { AlertType, AlertCategory, AlertReasons, AlertStatus } from '../entities/alert.entity';
+import { AlertType, AlertCategory, AlertReasons, AlertStatus, AlertSubcategory } from '../entities/alert.entity';
 
 export interface QueryAlertDto {
   take?: number; // Number of records to return (pagination)
@@ -6,6 +6,7 @@ export interface QueryAlertDto {
   q?: string; // Search in message
   type?: AlertType;
   category?: AlertCategory;
+  subcategory?: AlertSubcategory;
   vehicleId?: string;
   lineItemId?: string;
   invoiceId?: string;

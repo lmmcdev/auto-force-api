@@ -1,6 +1,7 @@
 import { SqlQuerySpec } from '@azure/cosmos';
 import { getVehiclesContainer } from '../../../infra/cosmos';
 import { Vehicle } from '../entities/vehicle.entity';
+import { alertService } from '../../alert/services/alert.service';
 
 function nowIso() {
   return new Date().toISOString();
@@ -45,6 +46,9 @@ export class VehicleService {
     const container = await this.getContainer();
     await container.items.create(doc);
 
+    // Check expiration dates and find existing alerts
+    await this.checkExpirationDatesForAlerts(doc);
+
     return doc;
   }
 
@@ -71,8 +75,22 @@ export class VehicleService {
       updatedAt: nowIso(),
     };
 
+    // Check if any expiration date fields have changed
+    const expirationFieldsChanged =
+      (updates.insuranceExpirationDate !== undefined && updates.insuranceExpirationDate !== current.insuranceExpirationDate) ||
+      (updates.tagExpirationDate !== undefined && updates.tagExpirationDate !== current.tagExpirationDate) ||
+      (updates.annualInspectionExpirationDate !== undefined && updates.annualInspectionExpirationDate !== current.annualInspectionExpirationDate) ||
+      (updates.registrationExpirationDate !== undefined && updates.registrationExpirationDate !== current.registrationExpirationDate);
+
     const container = await this.getContainer();
     await container.item(id, id).replace(next);
+
+    // If expiration dates changed, check and create alerts
+    if (expirationFieldsChanged) {
+      console.log(`Expiration date(s) changed for vehicle ${id}. Checking alerts...`);
+      await this.checkExpirationDatesForAlerts(next);
+    }
+
     return next;
   }
 
@@ -190,6 +208,9 @@ export class VehicleService {
         const container = await this.getContainer();
         await container.items.create(doc);
         success.push(doc);
+
+        // Check expiration dates and find existing alerts
+        await this.checkExpirationDatesForAlerts(doc);
       } catch (error) {
         errors.push({
           item,
@@ -203,6 +224,71 @@ export class VehicleService {
 
   private generateId(): string {
     return `veh_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Helper method to check and create alerts for vehicle expiration dates
+   * Evaluates insuranceExpirationDate, tagExpirationDate, annualInspectionExpirationDate, registrationExpirationDate
+   * Creates an alert if one doesn't exist for the given parameters
+   */
+  private async checkExpirationDatesForAlerts(vehicle: Vehicle): Promise<void> {
+    const expirationFields = [
+      { field: 'insuranceExpirationDate', subcategory: 'Insurance' },
+      { field: 'tagExpirationDate', subcategory: 'Tag' },
+      { field: 'annualInspectionExpirationDate', subcategory: 'Annual Inspection' },
+      { field: 'registrationExpirationDate', subcategory: 'Registration' },
+    ];
+
+    for (const { field, subcategory } of expirationFields) {
+      const expirationDate = vehicle[field as keyof Vehicle] as string;
+
+      // Only check if the expiration date is not empty
+      if (expirationDate && expirationDate.trim() !== '') {
+        try {
+          // Search for existing alert with these parameters
+          const existingAlerts = await alertService.findByVehicleIdAndTypeAndCategoryAndReasonsAndSubcategoryAndExpirationDate(
+            vehicle.id,
+            'PERMIT',
+            'PermitVehicle',
+            'Expiration Date',
+            subcategory,
+            expirationDate
+          );
+
+          if (existingAlerts.length > 0) {
+            console.log(
+              `Found ${existingAlerts.length} existing alert(s) for vehicle ${vehicle.id}, subcategory: ${subcategory}, expiration: ${expirationDate}`
+            );
+          } else {
+            // No existing alert found - create a new one
+            console.log(
+              `No existing alert found for vehicle ${vehicle.id}, subcategory: ${subcategory}, expiration: ${expirationDate}. Creating new alert...`
+            );
+
+            const newAlert = await alertService.create({
+              type: 'PERMIT',
+              category: 'PermitVehicle',
+              subcategory: subcategory,
+              vehicleId: vehicle.id,
+              reasons: 'Expiration Date',
+              status: 'Pending',
+              message: `${subcategory} expiring on ${expirationDate} for vehicle ${vehicle.id}`,
+              expirationDate: expirationDate,
+            });
+
+            console.log(
+              `Created new alert ${newAlert.id} for vehicle ${vehicle.id}, subcategory: ${subcategory}, expiration: ${expirationDate}`
+            );
+          }
+        } catch (error) {
+          console.error(
+            `Error checking/creating alert for vehicle ${vehicle.id}, field ${field}:`,
+            error instanceof Error ? error.message : error
+          );
+          // Don't throw - we don't want to fail vehicle creation if alert check/creation fails
+        }
+      }
+    }
   }
 }
 export const vehicleService = new VehicleService();
