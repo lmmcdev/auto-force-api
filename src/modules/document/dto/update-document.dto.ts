@@ -1,4 +1,4 @@
-import { DocumentType, File } from "../entities/document.entity";
+import { DocumentType, File } from '../entities/document.entity';
 
 /**
  * DTO for updating an existing document

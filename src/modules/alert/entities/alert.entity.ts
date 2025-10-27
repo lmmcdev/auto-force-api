@@ -1,8 +1,8 @@
 export type AlertType = 'WARRANTY' | 'LICENSE' | 'PERMIT' | 'HIGHER_PRICE' | 'CERTIFICATION' | 'SAME_SERVICE' | string;
 
-export type AlertCategory = 'ServiceType' | 'DriverLicense' |'PermitVehicle'| string;
+export type AlertCategory = 'ServiceType' | 'DriverLicense' | 'PermitVehicle' | string;
 
-export type AlertSubcategory = 'Insurance' | 'Tag' | 'Annual Inspection' | 'Registration' |  string;
+export type AlertSubcategory = 'Insurance' | 'Tag' | 'Annual Inspection' | 'Registration' | string;
 
 export type AlertReasons =
   | 'DATE_VALID'

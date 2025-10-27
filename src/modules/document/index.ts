@@ -1,4 +1,4 @@
 /**
  * Document Module Entry Point
  */
-export * from "./document.module";
+export * from './document.module';

@@ -30,12 +30,12 @@ export interface File {
  * Types of documents that can be stored
  */
 export type DocumentType =
-  | "Truck Insurance Liability"
-  | "Lease Paperwork"
-  | "Registration"
-  | "Annual Inspection"
-  | "Inspeccion Alivi"
-  | "Custom Document";
+  | 'Truck Insurance Liability'
+  | 'Lease Paperwork'
+  | 'Registration'
+  | 'Annual Inspection'
+  | 'Inspeccion Alivi'
+  | 'Custom Document';
 
 /**
  * Entity stored in Cosmos DB

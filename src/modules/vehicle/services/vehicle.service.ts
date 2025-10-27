@@ -77,10 +77,13 @@ export class VehicleService {
 
     // Check if any expiration date fields have changed
     const expirationFieldsChanged =
-      (updates.insuranceExpirationDate !== undefined && updates.insuranceExpirationDate !== current.insuranceExpirationDate) ||
+      (updates.insuranceExpirationDate !== undefined &&
+        updates.insuranceExpirationDate !== current.insuranceExpirationDate) ||
       (updates.tagExpirationDate !== undefined && updates.tagExpirationDate !== current.tagExpirationDate) ||
-      (updates.annualInspectionExpirationDate !== undefined && updates.annualInspectionExpirationDate !== current.annualInspectionExpirationDate) ||
-      (updates.registrationExpirationDate !== undefined && updates.registrationExpirationDate !== current.registrationExpirationDate);
+      (updates.annualInspectionExpirationDate !== undefined &&
+        updates.annualInspectionExpirationDate !== current.annualInspectionExpirationDate) ||
+      (updates.registrationExpirationDate !== undefined &&
+        updates.registrationExpirationDate !== current.registrationExpirationDate);
 
     const container = await this.getContainer();
     await container.item(id, id).replace(next);
@@ -246,14 +249,15 @@ export class VehicleService {
       if (expirationDate && expirationDate.trim() !== '') {
         try {
           // Search for existing alert with these parameters
-          const existingAlerts = await alertService.findByVehicleIdAndTypeAndCategoryAndReasonsAndSubcategoryAndExpirationDate(
-            vehicle.id,
-            'PERMIT',
-            'PermitVehicle',
-            'Expiration Date',
-            subcategory,
-            expirationDate
-          );
+          const existingAlerts =
+            await alertService.findByVehicleIdAndTypeAndCategoryAndReasonsAndSubcategoryAndExpirationDate(
+              vehicle.id,
+              'PERMIT',
+              'PermitVehicle',
+              'Expiration Date',
+              subcategory,
+              expirationDate
+            );
 
           if (existingAlerts.length > 0) {
             console.log(

@@ -1,4 +1,4 @@
-import { DocumentType } from "../entities/document.entity";
+import { DocumentType } from '../entities/document.entity';
 
 /**
  * DTO for querying documents

@@ -397,7 +397,8 @@ export class AlertService {
     const container = await this.getContainer();
 
     // Build dynamic query based on provided parameters
-    let queryString = 'SELECT * FROM c WHERE c.vehicleId = @vehicleId AND c.type = @type AND c.category = @category AND c.reasons = @reasons';
+    let queryString =
+      'SELECT * FROM c WHERE c.vehicleId = @vehicleId AND c.type = @type AND c.category = @category AND c.reasons = @reasons';
     const parameters: { name: string; value: string }[] = [
       { name: '@vehicleId', value: vehicleId },
       { name: '@type', value: type },
