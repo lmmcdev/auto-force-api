@@ -20,6 +20,7 @@ export async function getAlerts(request: HttpRequest, context: InvocationContext
       q: url.searchParams.get('q') || undefined,
       type: url.searchParams.get('type') || undefined,
       category: url.searchParams.get('category') || undefined,
+      subcategory: url.searchParams.get('subcategory') || undefined,
       vehicleId: url.searchParams.get('vehicleId') || undefined,
       lineItemId: url.searchParams.get('lineItemId') || undefined,
       invoiceId: url.searchParams.get('invoiceId') || undefined,
@@ -354,11 +355,57 @@ export async function bulkImportAlerts(request: HttpRequest, context: Invocation
   }
 }
 
+// GET /v1/alerts/permit-by-date-range?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+export async function getAlertsTypePermitByStartDateAndEndDate(
+  request: HttpRequest,
+  context: InvocationContext
+): Promise<HttpResponseInit> {
+  try {
+    const url = new URL(request.url);
+    const startDate = url.searchParams.get('startDate');
+    const endDate = url.searchParams.get('endDate');
+
+    if (!startDate || !endDate) {
+      return {
+        status: 400,
+        jsonBody: { error: 'Both startDate and endDate query parameters are required (format: YYYY-MM-DD)' },
+      };
+    }
+
+    // Optional: validate date format (basic check)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}/;
+    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
+      return {
+        status: 400,
+        jsonBody: { error: 'Invalid date format. Use YYYY-MM-DD format' },
+      };
+    }
+
+    const alerts = await alertService.findPermitAlertsByExpirationDateRange(startDate, endDate);
+    return { status: 200, jsonBody: { data: alerts, total: alerts.length } };
+  } catch (error: unknown) {
+    context.error('Error in getAlertsTypePermitByStartDateAndEndDate:', error);
+    return {
+      status: 500,
+      jsonBody: { error: error instanceof Error ? error.message : 'Internal server error' },
+    };
+  }
+}
+
 // Register routes
+// IMPORTANT: Register specific routes BEFORE generic routes with parameters
 app.http('getAlerts', {
   methods: ['GET'],
   route: 'v1/alerts',
   handler: getAlerts,
+});
+
+// Register specific routes before v1/alerts/{id}
+// Using different path structure to avoid conflict with v1/alerts/{id}
+app.http('getAlertsTypePermitByStartDateAndEndDate', {
+  methods: ['GET'],
+  route: 'v1/permit-alerts-by-date-range',
+  handler: getAlertsTypePermitByStartDateAndEndDate,
 });
 
 app.http('getAlert', {
@@ -450,3 +497,5 @@ app.http('bulkImportAlerts', {
   route: 'v1/alerts/import',
   handler: bulkImportAlerts,
 });
+
+
