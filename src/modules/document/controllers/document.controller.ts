@@ -14,7 +14,7 @@ export class DocumentController {
       const body = (await request.json()) as CreateDocumentDto;
       const created = await documentService.create(body);
       return { status: 201, jsonBody: { message: 'Created', data: created } };
-    } catch (err: any) {
+    } catch (err: unknown) {
       context.error('document.postOne error', err);
       return this.toError(err);
     }

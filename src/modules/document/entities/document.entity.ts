@@ -23,7 +23,7 @@ export interface File {
   contentType: string;
   lastModified: string;
   etag?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
