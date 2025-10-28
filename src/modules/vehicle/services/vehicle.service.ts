@@ -2,6 +2,7 @@ import { SqlQuerySpec } from '@azure/cosmos';
 import { getVehiclesContainer } from '../../../infra/cosmos';
 import { Vehicle } from '../entities/vehicle.entity';
 import { alertService } from '../../alert/services/alert.service';
+import axios from 'axios';
 
 function nowIso() {
   return new Date().toISOString();
@@ -292,6 +293,82 @@ export class VehicleService {
           // Don't throw - we don't want to fail vehicle creation if alert check/creation fails
         }
       }
+    }
+  }
+
+  /**
+   * Decode VIN using NHTSA API
+   * @param vin Vehicle Identification Number (17 characters)
+   * @returns Decoded vehicle information
+   */
+  async decodeVin(vin: string): Promise<{
+    vin: string;
+    make: string;
+    model: string;
+    year: number;
+    manufacturer: string;
+    vehicleType: string;
+    bodyClass: string;
+    engineInfo: string;
+    transmissionInfo: string;
+    driveType: string;
+    fuelType: string;
+    plantInfo: string;
+    rawData: unknown;
+  }> {
+    try {
+      // Call NHTSA VIN Decoder API
+      const url = `${process.env.NHTSA_API_BASE_URL}/DecodeVin/${vin.toUpperCase()}?format=json`;
+      const response = await axios.get(url, {
+        timeout: 10000,
+        headers: { 'User-Agent': 'Auto-Force-API/1.0' },
+      });
+
+      const data = response.data;
+
+      if (!data.Results || !Array.isArray(data.Results)) {
+        throw new Error('Invalid response format from NHTSA API');
+      }
+
+      // Parse relevant fields from NHTSA response
+      const results = data.Results;
+      const getValue = (variableId: number): string => {
+        const item = results.find((r: { VariableId: number }) => r.VariableId === variableId);
+        return item?.Value || '';
+      };
+
+      // Extract key information
+      const decodedInfo = {
+        vin: vin.toUpperCase(),
+        make: getValue(26) || '', // Make
+        model: getValue(28) || '', // Model
+        year: parseInt(getValue(29)) || 0, // Model Year
+        manufacturer: getValue(27) || '', // Manufacturer Name
+        vehicleType: getValue(10) || '', // Vehicle Type
+        bodyClass: getValue(5) || '', // Body Class
+        engineInfo: `${getValue(13)} ${getValue(71)}`.trim() || '', // Engine Number of Cylinders + Engine Model
+        transmissionInfo: getValue(37) || '', // Transmission Style
+        driveType: getValue(15) || '', // Drive Type
+        fuelType: getValue(24) || '', // Fuel Type - Primary
+        plantInfo: getValue(31) || '', // Plant City + Plant Company Name
+        rawData: results, // Include full raw data for reference
+      };
+
+      // Validate that we got at least some basic info
+      if (!decodedInfo.make && !decodedInfo.model && !decodedInfo.year) {
+        throw new Error('Unable to decode VIN. VIN may be invalid or not found in NHTSA database.');
+      }
+
+      return decodedInfo;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status || 'unknown';
+        throw new Error(`Failed to decode VIN: NHTSA API request failed with status ${status}`);
+      }
+      if (error instanceof Error) {
+        throw new Error(`Failed to decode VIN: ${error.message}`);
+      }
+      throw new Error('Failed to decode VIN: Unknown error');
     }
   }
 }

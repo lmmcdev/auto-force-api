@@ -1,8 +1,19 @@
 export type InvoiceStatus = 'Draft' | 'PendingAlertReview' | 'Approved' | 'Rejected' | 'Paid' | 'Cancelled';
 
+export interface File {
+  id: string;
+  name: string;
+  url: string;
+  size: number;
+  contentType: string;
+  lastModified: string;
+  etag?: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface Invoice {
   id: string;
-  vehicleId: string; // Associated with a vehicle
+  vehicleId?: string; // Associated with a vehicle (optional)
   vendorId: string; // Associated with a vendor
   invoiceNumber: string;
   orderStartDate: string; // ISO date string
@@ -12,13 +23,14 @@ export interface Invoice {
   status: InvoiceStatus;
   tax: number; // Number with two decimal places
   description: string;
+  file?: File; // Optional file attachment
   createdAt?: string;
   updatedAt?: string;
 }
 
 export class InvoiceEntity implements Invoice {
   id: string;
-  vehicleId: string;
+  vehicleId?: string;
   vendorId: string;
   invoiceNumber: string;
   orderStartDate: string;
@@ -28,12 +40,13 @@ export class InvoiceEntity implements Invoice {
   status: InvoiceStatus;
   tax: number;
   description: string;
+  file?: File;
   createdAt?: string;
   updatedAt?: string;
 
   constructor(invoice: Partial<Invoice> = {}) {
     this.id = invoice.id || '';
-    this.vehicleId = invoice.vehicleId || '';
+    this.vehicleId = invoice.vehicleId;
     this.vendorId = invoice.vendorId || '';
     this.invoiceNumber = invoice.invoiceNumber || '';
     this.orderStartDate = invoice.orderStartDate || '';
@@ -43,6 +56,7 @@ export class InvoiceEntity implements Invoice {
     this.status = invoice.status || 'Draft';
     this.tax = invoice.tax || 0;
     this.description = invoice.description || '';
+    this.file = invoice.file;
     this.createdAt = invoice.createdAt;
     this.updatedAt = invoice.updatedAt;
   }

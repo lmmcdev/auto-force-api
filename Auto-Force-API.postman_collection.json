@@ -567,6 +567,34 @@
 						"description": "Delete a vehicle"
 					},
 					"response": []
+				},
+				{
+					"name": "Decode VIN",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/vehicles/decode-vin/:vin",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"vehicles",
+								"decode-vin",
+								":vin"
+							],
+							"variable": [
+								{
+									"key": "vin",
+									"value": "1FDEE3FL7GDC24245",
+									"description": "Vehicle Identification Number (17 characters)"
+								}
+							]
+						},
+						"description": "Decode VIN using NHTSA API to get vehicle information (make, model, year, etc.)"
+					},
+					"response": []
 				}
 			],
 			"description": "Vehicle management endpoints"
@@ -795,6 +823,410 @@
 				}
 			],
 			"description": "Alert management endpoints"
+		},
+		{
+			"name": "Invoices",
+			"item": [
+				{
+					"name": "Upload Invoice",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": [],
+									"description": "Invoice file (PDF, image, etc.)"
+								},
+								{
+									"key": "vendorId",
+									"value": "VEN-1234567890",
+									"type": "text",
+									"description": "Vendor ID (required)"
+								},
+								{
+									"key": "invoiceNumber",
+									"value": "INV-2024-001",
+									"type": "text",
+									"description": "Unique invoice number (required)"
+								},
+								{
+									"key": "orderStartDate",
+									"value": "2024-01-15",
+									"type": "text",
+									"description": "Order start date ISO 8601 (required)"
+								},
+								{
+									"key": "invoiceAmount",
+									"value": "1250.00",
+									"type": "text",
+									"description": "Total invoice amount (required)"
+								},
+								{
+									"key": "vehicleId",
+									"value": "VEH-9876543210",
+									"type": "text",
+									"description": "Vehicle ID (optional)",
+									"disabled": true
+								},
+								{
+									"key": "subTotal",
+									"value": "1000.00",
+									"type": "text",
+									"description": "Subtotal before tax (optional)",
+									"disabled": true
+								},
+								{
+									"key": "tax",
+									"value": "250.00",
+									"type": "text",
+									"description": "Tax amount (optional)",
+									"disabled": true
+								},
+								{
+									"key": "description",
+									"value": "Motor repair and oil change",
+									"type": "text",
+									"description": "Invoice description (optional)",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "Draft",
+									"type": "text",
+									"description": "Invoice status: Draft, PendingAlertReview, Approved, Rejected, Paid, Cancelled",
+									"disabled": true
+								},
+								{
+									"key": "metadata",
+									"value": "{\"poNumber\":\"PO-12345\",\"paymentTerms\":\"Net 30\"}",
+									"type": "text",
+									"description": "Additional metadata as JSON string",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/invoices/upload",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"invoices",
+								"upload"
+							]
+						},
+						"description": "Upload an invoice file and create invoice record. Optionally associate with a vehicle."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Invoice",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"vendorId\": \"VEN-1234567890\",\n  \"vehicleId\": \"VEH-9876543210\",\n  \"invoiceNumber\": \"INV-2024-001\",\n  \"orderStartDate\": \"2024-01-15\",\n  \"uploadDate\": \"2024-01-15\",\n  \"invoiceAmount\": 1250.00,\n  \"subTotal\": 1000.00,\n  \"tax\": 250.00,\n  \"status\": \"Draft\",\n  \"description\": \"Motor repair\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/invoices",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"invoices"
+							]
+						},
+						"description": "Create a new invoice (without file upload)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Invoice by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/invoices/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"invoices",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "inv_1234567890_abc123",
+									"description": "Invoice ID"
+								}
+							]
+						},
+						"description": "Get a specific invoice by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "List Invoices",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/invoices?vehicleId=VEH-1234567890&status=Draft&skip=0&take=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"invoices"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "repair",
+									"description": "Search term",
+									"disabled": true
+								},
+								{
+									"key": "vehicleId",
+									"value": "VEH-1234567890",
+									"description": "Filter by vehicle ID"
+								},
+								{
+									"key": "vendorId",
+									"value": "VEN-1234567890",
+									"description": "Filter by vendor ID",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "Draft",
+									"description": "Filter by status"
+								},
+								{
+									"key": "invoiceNumber",
+									"value": "INV-2024-001",
+									"description": "Filter by invoice number",
+									"disabled": true
+								},
+								{
+									"key": "minAmount",
+									"value": "100",
+									"description": "Minimum invoice amount",
+									"disabled": true
+								},
+								{
+									"key": "maxAmount",
+									"value": "5000",
+									"description": "Maximum invoice amount",
+									"disabled": true
+								},
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "Pagination offset"
+								},
+								{
+									"key": "take",
+									"value": "50",
+									"description": "Number of records to return"
+								}
+							]
+						},
+						"description": "List invoices with optional filters and pagination"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Invoice",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"Approved\",\n  \"description\": \"Motor repair - Approved\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/invoices/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"invoices",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "inv_1234567890_abc123",
+									"description": "Invoice ID"
+								}
+							]
+						},
+						"description": "Update an existing invoice"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Invoice",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/invoices/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"invoices",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "inv_1234567890_abc123",
+									"description": "Invoice ID"
+								}
+							]
+						},
+						"description": "Delete an invoice"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Invoices by Vehicle",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/invoices/by-vehicle/:vehicleId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"invoices",
+								"by-vehicle",
+								":vehicleId"
+							],
+							"variable": [
+								{
+									"key": "vehicleId",
+									"value": "VEH-1234567890",
+									"description": "Vehicle ID"
+								}
+							]
+						},
+						"description": "Get all invoices for a specific vehicle"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Invoices by Vendor",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/invoices/by-vendor/:vendorId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"invoices",
+								"by-vendor",
+								":vendorId"
+							],
+							"variable": [
+								{
+									"key": "vendorId",
+									"value": "VEN-1234567890",
+									"description": "Vendor ID"
+								}
+							]
+						},
+						"description": "Get all invoices for a specific vendor"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Invoice by Number",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/invoices/by-invoice-number/:invoiceNumber",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"invoices",
+								"by-invoice-number",
+								":invoiceNumber"
+							],
+							"variable": [
+								{
+									"key": "invoiceNumber",
+									"value": "INV-2024-001",
+									"description": "Invoice Number"
+								}
+							]
+						},
+						"description": "Get invoice by invoice number"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Invoices by Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/invoices/by-status/:status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"invoices",
+								"by-status",
+								":status"
+							],
+							"variable": [
+								{
+									"key": "status",
+									"value": "Draft",
+									"description": "Invoice status"
+								}
+							]
+						},
+						"description": "Get all invoices with a specific status"
+					},
+					"response": []
+				}
+			],
+			"description": "Invoice management endpoints"
 		}
 	],
 	"event": [
@@ -803,7 +1235,14 @@
 			"script": {
 				"type": "text/javascript",
 				"exec": [
-					""
+					"// Add API key header if apiKey variable is set",
+					"const apiKey = pm.collectionVariables.get('apiKey');",
+					"if (apiKey && apiKey.length > 0) {",
+					"    pm.request.headers.add({",
+					"        key: 'x-functions-key',",
+					"        value: apiKey",
+					"    });",
+					"}"
 				]
 			}
 		},
@@ -821,6 +1260,11 @@
 		{
 			"key": "baseUrl",
 			"value": "http://localhost:7071/api",
+			"type": "string"
+		},
+		{
+			"key": "apiKey",
+			"value": "",
 			"type": "string"
 		}
 	]

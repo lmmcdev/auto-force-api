@@ -6,6 +6,12 @@ import { UpdateDocumentDto } from '../dto/update-document.dto';
 import { QueryDocumentDto } from '../dto/query-document.dto';
 import { fileUploadService } from '../../../shared/services/file-upload.service';
 import { vehicleService } from '../../vehicle/services/vehicle.service';
+import {
+  validateDocumentStartDate,
+  validateExpirationDate,
+  generateDocumentStoragePath,
+  generateStandardFileName,
+} from '../../../shared/helpers/document-validation.helper';
 
 function nowIso() {
   return new Date().toISOString();
@@ -325,16 +331,24 @@ export class DocumentService {
       throw new Error(`Vehicle with ID ${vehicleId} not found`);
     }
 
+    // Validate dates
+    validateDocumentStartDate(startDate, vehicle);
+    validateExpirationDate(startDate, expirationDate);
+
+    // Generate standardized file name
+    const standardFileName = generateStandardFileName(type, vehicleId, fileName, startDate);
+
     // Upload file to storage
     const uploadedFile = await fileUploadService.uploadFile({
       file: fileBuffer,
-      fileName: fileName,
+      fileName: standardFileName,
       container: 'transportation',
-      path: `vehicle/${vehicleId}`,
+      path: generateDocumentStoragePath(vehicleId, startDate),
       metadata: {
         vehicleId: vehicleId,
         documentType: type,
         uploadedAt: new Date().toISOString(),
+        originalFileName: fileName,
         ...metadata,
       },
     });

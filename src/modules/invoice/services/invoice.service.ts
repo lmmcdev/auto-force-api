@@ -5,9 +5,11 @@ import {
   getVendorsContainer,
   getLineItemsContainer,
 } from '../../../infra/cosmos';
-import { Invoice, InvoiceStatus } from '../entities/invoice.entity';
+import { Invoice, InvoiceStatus, File } from '../entities/invoice.entity';
 import { UpdateInvoiceDto } from '../dto/update-invoice.dto';
 import { QueryInvoiceDto } from '../dto/query-invoice.dto';
+import { fileUploadService } from '../../../shared/services/file-upload.service';
+import { generateInvoiceStoragePath, extractYear, extractMonth } from '../../../shared/helpers/document-validation.helper';
 
 function nowIso() {
   return new Date().toISOString();
@@ -556,6 +558,121 @@ export class InvoiceService {
 
   private generateId(): string {
     return `inv_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  }
+
+  /**
+   * Upload an invoice file and create invoice record
+   * @param params Upload parameters including file buffer, invoice data, and optional vehicle
+   * @returns Created invoice with file metadata
+   */
+  async uploadInvoice(params: {
+    fileBuffer: Buffer;
+    fileName: string;
+    vendorId: string;
+    invoiceNumber: string;
+    orderStartDate: string;
+    invoiceAmount: number;
+    subTotal: number;
+    tax: number;
+    description?: string;
+    vehicleId?: string;
+    status?: InvoiceStatus;
+    metadata?: Record<string, unknown>;
+  }): Promise<Invoice> {
+    const {
+      fileBuffer,
+      fileName,
+      vendorId,
+      invoiceNumber,
+      orderStartDate,
+      invoiceAmount,
+      subTotal,
+      tax,
+      description,
+      vehicleId,
+      status,
+      metadata,
+    } = params;
+
+    // Validate vendor exists
+    const vendorsContainer = await this.getVendorsContainer();
+    const vendor = await vendorsContainer.item(vendorId, vendorId).read();
+    if (!vendor.resource) {
+      throw new Error(`Vendor with ID ${vendorId} not found`);
+    }
+
+    // Validate vehicle exists if provided
+    if (vehicleId) {
+      const vehiclesContainer = await this.getVehiclesContainer();
+      const vehicle = await vehiclesContainer.item(vehicleId, vehicleId).read();
+      if (!vehicle.resource) {
+        throw new Error(`Vehicle with ID ${vehicleId} not found`);
+      }
+    }
+
+    // Check for duplicate invoice number
+    const existingInvoice = await this.findByInvoiceNumber(invoiceNumber);
+    if (existingInvoice) {
+      throw new Error(`Invoice with invoice number ${invoiceNumber} already exists`);
+    }
+
+    // Generate standardized file name for invoice
+    const year = extractYear(orderStartDate) ?? new Date().getFullYear();
+    const month = extractMonth(orderStartDate) ?? new Date().getMonth() + 1;
+    const extension = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.')) : '';
+    const standardFileName = `invoice_${invoiceNumber.replace(/[^a-z0-9]/gi, '-')}_${orderStartDate}${extension}`;
+
+    // Upload file to storage
+    const uploadedFile = await fileUploadService.uploadFile({
+      file: fileBuffer,
+      fileName: standardFileName,
+      container: 'transportation',
+      path: generateInvoiceStoragePath(vehicleId, orderStartDate),
+      metadata: {
+        vehicleId: vehicleId ?? null,
+        vendorId: vendorId,
+        invoiceNumber: invoiceNumber,
+        uploadedAt: new Date().toISOString(),
+        originalFileName: fileName,
+        ...metadata,
+      },
+    });
+
+    // Create file metadata object
+    const fileMetadata: File = {
+      id: uploadedFile.id,
+      name: uploadedFile.name,
+      url: uploadedFile.url,
+      size: uploadedFile.size,
+      contentType: uploadedFile.contentType,
+      lastModified: uploadedFile.lastModified,
+      etag: uploadedFile.etag,
+      metadata: uploadedFile.metadata,
+    };
+
+    // Create invoice record
+    const invoice: Invoice = {
+      id: this.generateId(),
+      vehicleId: vehicleId,
+      vendorId: vendorId,
+      invoiceNumber: invoiceNumber,
+      orderStartDate: orderStartDate,
+      uploadDate: new Date().toISOString(),
+      invoiceAmount: Number(invoiceAmount.toFixed(2)),
+      subTotal: Number(subTotal.toFixed(2)),
+      tax: Number(tax.toFixed(2)),
+      status: status || 'Draft',
+      description: description || '',
+      file: fileMetadata,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+
+    const cleanDoc = cleanUndefined(invoice);
+    const container = await this.getContainer();
+    await container.items.create(cleanDoc);
+
+    return cleanDoc;
   }
 }
 
