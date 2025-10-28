@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { AppModule } from './app.module';
 import { initCosmos } from './infra/cosmos';
 

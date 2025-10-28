@@ -4,6 +4,9 @@ import { CreateDocumentDto } from '../dto/create-document.dto';
 import { UpdateDocumentDto } from '../dto/update-document.dto';
 import { documentService } from '../services/document.service';
 import { QueryDocumentDto } from '../dto/query-document.dto';
+import { Readable } from 'stream';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import busboy = require('busboy');
 
 const documentsRoute = 'v1/documents';
 
@@ -216,6 +219,148 @@ export class DocumentController {
     }
   }
 
+  // POST /documents/upload-to-vehicle
+  async uploadToVehicle(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const contentType = request.headers.get('content-type') || '';
+
+      if (!contentType.includes('multipart/form-data')) {
+        return {
+          status: 400,
+          jsonBody: {
+            message: 'Content-Type must be multipart/form-data',
+          },
+        };
+      }
+
+      // Parse multipart form data
+      const formData = await this.parseMultipartFormData(request);
+
+      // Validate required fields
+      if (!formData.file) {
+        return { status: 400, jsonBody: { message: 'File is required' } };
+      }
+
+      if (!formData.fields.vehicleId) {
+        return { status: 400, jsonBody: { message: 'vehicleId is required' } };
+      }
+
+      if (!formData.fields.type) {
+        return { status: 400, jsonBody: { message: 'type (document type) is required' } };
+      }
+
+      // Validate document type
+      const validTypes: DocumentType[] = [
+        'Truck Insurance Liability',
+        'Lease Paperwork',
+        'Registration',
+        'Annual Inspection',
+        'Inspeccion Alivi',
+        'Custom Document',
+      ];
+
+      if (!validTypes.includes(formData.fields.type as DocumentType)) {
+        return {
+          status: 400,
+          jsonBody: {
+            message: `Invalid document type. Must be one of: ${validTypes.join(', ')}`,
+          },
+        };
+      }
+
+      // Parse optional metadata
+      let metadata: Record<string, unknown> | undefined;
+      if (formData.fields.metadata) {
+        try {
+          metadata = JSON.parse(formData.fields.metadata);
+        } catch {
+          return {
+            status: 400,
+            jsonBody: { message: 'metadata must be valid JSON' },
+          };
+        }
+      }
+
+      // Upload document to vehicle
+      const document = await documentService.uploadDocumentToVehicle({
+        fileBuffer: formData.file.buffer,
+        fileName: formData.file.filename,
+        vehicleId: formData.fields.vehicleId,
+        type: formData.fields.type as DocumentType,
+        startDate: formData.fields.startDate,
+        expirationDate: formData.fields.expirationDate,
+        metadata: metadata,
+        updateVehicle: formData.fields.updateVehicle !== 'false', // default true
+      });
+
+      return {
+        status: 201,
+        jsonBody: {
+          message: 'Document uploaded successfully',
+          data: document,
+        },
+      };
+    } catch (err: unknown) {
+      context.error('document.uploadToVehicle error', err);
+      return this.toError(err);
+    }
+  }
+
+  /**
+   * Helper method to parse multipart/form-data
+   */
+  private async parseMultipartFormData(request: HttpRequest): Promise<{
+    file: { buffer: Buffer; filename: string; mimeType: string } | null;
+    fields: Record<string, string>;
+  }> {
+    // First, read the entire request body into a buffer
+    const bodyArrayBuffer = await request.arrayBuffer();
+    const bodyBuffer = Buffer.from(bodyArrayBuffer);
+
+    return new Promise((resolve, reject) => {
+      const fields: Record<string, string> = {};
+      let fileData: { buffer: Buffer; filename: string; mimeType: string } | null = null;
+
+      const bb = busboy({
+        headers: {
+          'content-type': request.headers.get('content-type') || '',
+        },
+      });
+
+      bb.on('file', (_fieldname: string, file: Readable, info: busboy.FileInfo) => {
+        const chunks: Buffer[] = [];
+
+        file.on('data', (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
+
+        file.on('end', () => {
+          fileData = {
+            buffer: Buffer.concat(chunks),
+            filename: info.filename,
+            mimeType: info.mimeType,
+          };
+        });
+      });
+
+      bb.on('field', (fieldname: string, value: string) => {
+        fields[fieldname] = value;
+      });
+
+      bb.on('finish', () => {
+        resolve({ file: fileData, fields });
+      });
+
+      bb.on('error', (error: Error) => {
+        reject(error);
+      });
+
+      // Create stream from buffer and pipe to busboy
+      const bodyStream = Readable.from(bodyBuffer);
+      bodyStream.pipe(bb);
+    });
+  }
+
   // Mapeo de errores a HTTP
   private toError(err: any): HttpResponseInit {
     const msg = String(err?.message ?? 'Internal error');
@@ -303,4 +448,12 @@ app.http('GetDocumentsExpiringSoon', {
   route: `${documentsRoute}/expiring-soon/{days}`,
   authLevel: 'function',
   handler: (req, ctx) => documentController.getExpiringSoon(req, ctx),
+});
+
+// File upload endpoint
+app.http('UploadDocumentToVehicle', {
+  methods: ['POST'],
+  route: `${documentsRoute}/upload-to-vehicle`,
+  authLevel: 'function',
+  handler: (req, ctx) => documentController.uploadToVehicle(req, ctx),
 });

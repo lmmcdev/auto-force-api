@@ -1,3 +1,14 @@
+export interface File {
+  id: string;
+  name: string;
+  url: string;
+  size: number;
+  contentType: string;
+  lastModified: string;
+  etag?: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface Vehicle {
   id: string;
   truckExternalId: string;
@@ -12,9 +23,16 @@ export interface Vehicle {
   aliviInspectionDate: string;
   ride2MdInspectionDate: string;
   insuranceExpirationDate: string;
+  insuranceFile?: File;
   tagExpirationDate: string;
+  tagFile?: File;
   annualInspectionExpirationDate: string;
+  annualInspectionFile?: File;
   registrationExpirationDate: string;
+  registrationFile?: File;
+  leasePaperworkFile?: File;
+  inspeccionAliviFile?: File;
+  customDocumentFile?: File;
   make: string;
   color: string;
   year: number;
@@ -36,9 +54,16 @@ export class VehicleEntity implements Vehicle {
   aliviInspectionDate: string;
   ride2MdInspectionDate: string;
   insuranceExpirationDate: string;
+  insuranceFile?: File;
   tagExpirationDate: string;
+  tagFile?: File;
   annualInspectionExpirationDate: string;
+  annualInspectionFile?: File;
   registrationExpirationDate: string;
+  registrationFile?: File;
+  leasePaperworkFile?: File;
+  inspeccionAliviFile?: File;
+  customDocumentFile?: File;
   make: string;
   color: string;
   year: number;
