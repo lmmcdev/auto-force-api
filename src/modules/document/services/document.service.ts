@@ -1,9 +1,11 @@
 import { SqlQuerySpec } from '@azure/cosmos';
 import { getDocumentsContainer } from '../../../infra/cosmos';
-import { Document, DocumentType } from '../entities/document.entity';
+import { Document, DocumentType, File } from '../entities/document.entity';
 import { CreateDocumentDto } from '../dto/create-document.dto';
 import { UpdateDocumentDto } from '../dto/update-document.dto';
 import { QueryDocumentDto } from '../dto/query-document.dto';
+import { fileUploadService } from '../../../shared/services/file-upload.service';
+import { vehicleService } from '../../vehicle/services/vehicle.service';
 
 function nowIso() {
   return new Date().toISOString();
@@ -282,15 +284,164 @@ export class DocumentService {
       try {
         const created = await this.create(doc);
         success.push(created);
-      } catch (err: any) {
+      } catch (err: unknown) {
         errors.push({
           item: doc,
-          error: err?.message || 'Unknown error',
+          error: err instanceof Error ? err.message : 'Unknown error',
         });
       }
     }
 
     return { success, errors };
+  }
+
+  /**
+   * Upload a file and create a document, optionally attaching it to a vehicle
+   * @param fileBuffer File buffer to upload
+   * @param fileName Name of the file
+   * @param vehicleId Vehicle ID to attach the document to
+   * @param type Document type
+   * @param startDate Optional start date
+   * @param expirationDate Optional expiration date
+   * @param metadata Optional metadata for the file
+   * @param updateVehicle Whether to update the vehicle with the file (default: true)
+   * @returns Created document with file metadata
+   */
+  async uploadDocumentToVehicle(params: {
+    fileBuffer: Buffer;
+    fileName: string;
+    vehicleId: string;
+    type: DocumentType;
+    startDate?: string;
+    expirationDate?: string;
+    metadata?: Record<string, unknown>;
+    updateVehicle?: boolean;
+  }): Promise<Document> {
+    const { fileBuffer, fileName, vehicleId, type, startDate, expirationDate, metadata, updateVehicle = true } = params;
+
+    // Validate vehicle exists
+    const vehicle = await vehicleService.getById(vehicleId);
+    if (!vehicle) {
+      throw new Error(`Vehicle with ID ${vehicleId} not found`);
+    }
+
+    // Upload file to storage
+    const uploadedFile = await fileUploadService.uploadFile({
+      file: fileBuffer,
+      fileName: fileName,
+      container: 'transportation',
+      path: `vehicle/${vehicleId}`,
+      metadata: {
+        vehicleId: vehicleId,
+        documentType: type,
+        uploadedAt: new Date().toISOString(),
+        ...metadata,
+      },
+    });
+
+    // Create file metadata object
+    const fileMetadata: File = {
+      id: uploadedFile.id,
+      name: uploadedFile.name,
+      url: uploadedFile.url,
+      size: uploadedFile.size,
+      contentType: uploadedFile.contentType,
+      lastModified: uploadedFile.lastModified,
+      etag: uploadedFile.etag,
+      metadata: uploadedFile.metadata,
+    };
+
+    // Create document
+    const document = await this.create({
+      vehicleId: vehicleId,
+      type: type,
+      startDate: startDate,
+      expirationDate: expirationDate,
+      file: fileMetadata,
+    });
+
+    // Update vehicle with file if requested and document type matches vehicle fields
+    if (updateVehicle) {
+      await this.updateVehicleWithFile(vehicleId, type, fileMetadata, expirationDate);
+    }
+
+    return document;
+  }
+
+  /**
+   * Helper method to update vehicle with file based on document type
+   * Maps document types to vehicle file fields
+   */
+  private async updateVehicleWithFile(
+    vehicleId: string,
+    documentType: DocumentType,
+    file: File,
+    expirationDate?: string
+  ): Promise<void> {
+    const updatePayload: Record<string, unknown> = {};
+
+    // Map document type to vehicle fields
+    switch (documentType) {
+      case 'Truck Insurance Liability':
+        updatePayload.insuranceFile = file;
+        if (expirationDate) {
+          updatePayload.insuranceExpirationDate = expirationDate;
+        }
+        break;
+
+      case 'Registration':
+        updatePayload.registrationFile = file;
+        if (expirationDate) {
+          updatePayload.registrationExpirationDate = expirationDate;
+        }
+        break;
+
+      case 'Annual Inspection':
+        updatePayload.annualInspectionFile = file;
+        if (expirationDate) {
+          updatePayload.annualInspectionExpirationDate = expirationDate;
+        }
+        break;
+
+      case 'Lease Paperwork':
+        updatePayload.leasePaperworkFile = file;
+        break;
+
+      case 'Inspeccion Alivi':
+        updatePayload.inspeccionAliviFile = file;
+        break;
+
+      case 'Custom Document':
+        updatePayload.customDocumentFile = file;
+        break;
+
+      default:
+        // Document type doesn't map to a vehicle field, skip vehicle update
+        console.log(`Document type "${documentType}" does not map to a vehicle field. Skipping vehicle update.`);
+        return;
+    }
+
+    // Only update if we have fields to update
+    if (Object.keys(updatePayload).length > 0) {
+      await vehicleService.update(vehicleId, updatePayload);
+      console.log(`Updated vehicle ${vehicleId} with ${documentType} file`);
+    }
+  }
+
+  /**
+   * Helper method to get the corresponding vehicle field name for a document type
+   */
+  private getVehicleFileFieldForDocumentType(documentType: DocumentType): string | null {
+    const mapping: Record<string, string> = {
+      'Truck Insurance Liability': 'insuranceFile',
+      Registration: 'registrationFile',
+      'Annual Inspection': 'annualInspectionFile',
+      'Lease Paperwork': 'leasePaperworkFile',
+      'Inspeccion Alivi': 'inspeccionAliviFile',
+      'Custom Document': 'customDocumentFile',
+    };
+
+    return mapping[documentType] || null;
   }
 }
 

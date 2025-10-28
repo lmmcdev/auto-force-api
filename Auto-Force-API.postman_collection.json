@@ -1,0 +1,827 @@
+{
+	"info": {
+		"_postman_id": "auto-force-api-collection",
+		"name": "Auto Force API",
+		"description": "API collection for Auto Force vehicle management system",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Documents",
+			"item": [
+				{
+					"name": "Upload Document to Vehicle",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": [],
+									"description": "File to upload (PDF, image, etc.)"
+								},
+								{
+									"key": "vehicleId",
+									"value": "VEH-1234567890",
+									"type": "text",
+									"description": "Vehicle ID to attach document to"
+								},
+								{
+									"key": "type",
+									"value": "Truck Insurance Liability",
+									"type": "text",
+									"description": "Document type: Truck Insurance Liability, Registration, Annual Inspection, Lease Paperwork, Inspeccion Alivi, Custom Document"
+								},
+								{
+									"key": "startDate",
+									"value": "2024-01-15",
+									"type": "text",
+									"description": "Start date (ISO 8601 format)",
+									"disabled": true
+								},
+								{
+									"key": "expirationDate",
+									"value": "2025-01-15",
+									"type": "text",
+									"description": "Expiration date (ISO 8601 format)",
+									"disabled": true
+								},
+								{
+									"key": "metadata",
+									"value": "{\"policyNumber\":\"POL-12345\",\"provider\":\"Insurance Company XYZ\"}",
+									"type": "text",
+									"description": "Additional metadata as JSON string",
+									"disabled": true
+								},
+								{
+									"key": "updateVehicle",
+									"value": "true",
+									"type": "text",
+									"description": "Update vehicle fields (true/false, default: true)",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/documents/upload-to-vehicle",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"documents",
+								"upload-to-vehicle"
+							]
+						},
+						"description": "Upload a file and create a document associated with a vehicle. The file is stored in Azure Blob Storage and optionally updates the corresponding vehicle fields."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Document",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"vehicleId\": \"VEH-1234567890\",\n  \"type\": \"Truck Insurance Liability\",\n  \"startDate\": \"2024-01-15\",\n  \"expirationDate\": \"2025-01-15\",\n  \"file\": {\n    \"id\": \"vehicle/VEH-1234567890/insurance.pdf\",\n    \"name\": \"insurance.pdf\",\n    \"url\": \"https://storage.blob.core.windows.net/transportation/vehicle/VEH-1234567890/insurance.pdf\",\n    \"size\": 245678,\n    \"contentType\": \"application/pdf\",\n    \"lastModified\": \"2024-01-15T10:30:00.000Z\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/documents",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"documents"
+							]
+						},
+						"description": "Create a new document with metadata (without file upload)"
+					},
+					"response": []
+				},
+				{
+					"name": "Import Documents (Bulk)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n  {\n    \"vehicleId\": \"VEH-1234567890\",\n    \"type\": \"Truck Insurance Liability\",\n    \"startDate\": \"2024-01-15\",\n    \"expirationDate\": \"2025-01-15\"\n  },\n  {\n    \"vehicleId\": \"VEH-0987654321\",\n    \"type\": \"Registration\",\n    \"expirationDate\": \"2025-12-31\"\n  }\n]"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/documents/import",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"documents",
+								"import"
+							]
+						},
+						"description": "Bulk import multiple documents"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Document by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/documents/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"documents",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "DOC-1234567890-abc123",
+									"description": "Document ID"
+								}
+							]
+						},
+						"description": "Get a specific document by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "List Documents (with filters)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/documents?vehicleId=VEH-1234567890&type=Truck Insurance Liability&expired=false&skip=0&take=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"documents"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "insurance",
+									"description": "Search term",
+									"disabled": true
+								},
+								{
+									"key": "vehicleId",
+									"value": "VEH-1234567890",
+									"description": "Filter by vehicle ID"
+								},
+								{
+									"key": "type",
+									"value": "Truck Insurance Liability",
+									"description": "Filter by document type"
+								},
+								{
+									"key": "startDateFrom",
+									"value": "2024-01-01",
+									"description": "Filter by start date from",
+									"disabled": true
+								},
+								{
+									"key": "startDateTo",
+									"value": "2024-12-31",
+									"description": "Filter by start date to",
+									"disabled": true
+								},
+								{
+									"key": "expirationDateFrom",
+									"value": "2024-01-01",
+									"description": "Filter by expiration date from",
+									"disabled": true
+								},
+								{
+									"key": "expirationDateTo",
+									"value": "2025-12-31",
+									"description": "Filter by expiration date to",
+									"disabled": true
+								},
+								{
+									"key": "expired",
+									"value": "false",
+									"description": "Filter by expired status (true/false)"
+								},
+								{
+									"key": "expiringSoon",
+									"value": "30",
+									"description": "Filter documents expiring within X days",
+									"disabled": true
+								},
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "Pagination offset"
+								},
+								{
+									"key": "take",
+									"value": "50",
+									"description": "Number of records to return"
+								}
+							]
+						},
+						"description": "List documents with optional filters and pagination"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Document",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"expirationDate\": \"2026-01-15\",\n  \"type\": \"Truck Insurance Liability\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/documents/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"documents",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "DOC-1234567890-abc123",
+									"description": "Document ID"
+								}
+							]
+						},
+						"description": "Update an existing document"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Document",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/documents/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"documents",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "DOC-1234567890-abc123",
+									"description": "Document ID"
+								}
+							]
+						},
+						"description": "Delete a document"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Documents by Vehicle",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/documents/by-vehicle/:vehicleId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"documents",
+								"by-vehicle",
+								":vehicleId"
+							],
+							"variable": [
+								{
+									"key": "vehicleId",
+									"value": "VEH-1234567890",
+									"description": "Vehicle ID"
+								}
+							]
+						},
+						"description": "Get all documents for a specific vehicle"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Documents by Type",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/documents/by-type/:type",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"documents",
+								"by-type",
+								":type"
+							],
+							"variable": [
+								{
+									"key": "type",
+									"value": "Truck Insurance Liability",
+									"description": "Document type"
+								}
+							]
+						},
+						"description": "Get all documents of a specific type"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Expired Documents",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/documents/expired",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"documents",
+								"expired"
+							]
+						},
+						"description": "Get all expired documents"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Documents Expiring Soon",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/documents/expiring-soon/:days",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"documents",
+								"expiring-soon",
+								":days"
+							],
+							"variable": [
+								{
+									"key": "days",
+									"value": "30",
+									"description": "Number of days to check"
+								}
+							]
+						},
+						"description": "Get documents expiring within the specified number of days"
+					},
+					"response": []
+				}
+			],
+			"description": "Document management endpoints"
+		},
+		{
+			"name": "Vehicles",
+			"item": [
+				{
+					"name": "Create Vehicle",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"make\": \"Ford\",\n  \"model\": \"F-150\",\n  \"year\": 2023,\n  \"vin\": \"1FTFW1E50PFC12345\",\n  \"licensePlate\": \"ABC-1234\",\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/vehicles",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"vehicles"
+							]
+						},
+						"description": "Create a new vehicle"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Vehicle by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/vehicles/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"vehicles",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "VEH-1234567890",
+									"description": "Vehicle ID"
+								}
+							]
+						},
+						"description": "Get a specific vehicle by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "List Vehicles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/vehicles?skip=0&take=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"vehicles"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "Pagination offset"
+								},
+								{
+									"key": "take",
+									"value": "50",
+									"description": "Number of records to return"
+								}
+							]
+						},
+						"description": "List all vehicles with pagination"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Vehicle",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"maintenance\",\n  \"insuranceExpirationDate\": \"2025-06-30\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/vehicles/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"vehicles",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "VEH-1234567890",
+									"description": "Vehicle ID"
+								}
+							]
+						},
+						"description": "Update an existing vehicle"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Vehicle",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/vehicles/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"vehicles",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "VEH-1234567890",
+									"description": "Vehicle ID"
+								}
+							]
+						},
+						"description": "Delete a vehicle"
+					},
+					"response": []
+				}
+			],
+			"description": "Vehicle management endpoints"
+		},
+		{
+			"name": "Alerts",
+			"item": [
+				{
+					"name": "Create Alert",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"vehicleId\": \"VEH-1234567890\",\n  \"type\": \"expiration\",\n  \"severity\": \"high\",\n  \"message\": \"Insurance expiring soon\",\n  \"dueDate\": \"2025-01-15\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/alerts",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"alerts"
+							]
+						},
+						"description": "Create a new alert"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Alert by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/alerts/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"alerts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ALERT-1234567890",
+									"description": "Alert ID"
+								}
+							]
+						},
+						"description": "Get a specific alert by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "List Alerts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/alerts?status=active&severity=high&skip=0&take=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"alerts"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "active",
+									"description": "Filter by status"
+								},
+								{
+									"key": "severity",
+									"value": "high",
+									"description": "Filter by severity"
+								},
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "Pagination offset"
+								},
+								{
+									"key": "take",
+									"value": "50",
+									"description": "Number of records to return"
+								}
+							]
+						},
+						"description": "List alerts with optional filters"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Alert",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"resolved\",\n  \"resolvedAt\": \"2024-01-20T10:00:00.000Z\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/alerts/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"alerts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ALERT-1234567890",
+									"description": "Alert ID"
+								}
+							]
+						},
+						"description": "Update an existing alert"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Alert",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/alerts/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"alerts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ALERT-1234567890",
+									"description": "Alert ID"
+								}
+							]
+						},
+						"description": "Delete an alert"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Alerts by Vehicle",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/alerts/by-vehicle/:vehicleId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"alerts",
+								"by-vehicle",
+								":vehicleId"
+							],
+							"variable": [
+								{
+									"key": "vehicleId",
+									"value": "VEH-1234567890",
+									"description": "Vehicle ID"
+								}
+							]
+						},
+						"description": "Get all alerts for a specific vehicle"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Alerts by Date Range",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/alerts/by-date-range?startDate=2024-01-01&endDate=2024-12-31",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"alerts",
+								"by-date-range"
+							],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2024-01-01",
+									"description": "Start date (ISO 8601)"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-12-31",
+									"description": "End date (ISO 8601)"
+								}
+							]
+						},
+						"description": "Get alerts within a date range"
+					},
+					"response": []
+				}
+			],
+			"description": "Alert management endpoints"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:7071/api",
+			"type": "string"
+		}
+	]
+}

@@ -17,9 +17,14 @@
   },
   "dependencies": {
     "@azure/cosmos": "^4.5.1",
-    "@azure/functions": "^4.0.0"
+    "@azure/functions": "^4.8.0",
+    "axios": "^1.13.0",
+    "busboy": "^1.6.0",
+    "dotenv": "^17.2.3",
+    "form-data": "^4.0.4"
   },
   "devDependencies": {
+    "@types/busboy": "^1.5.4",
     "@types/node": "^18.19.130",
     "@typescript-eslint/eslint-plugin": "^8.46.1",
     "@typescript-eslint/parser": "^8.46.1",
