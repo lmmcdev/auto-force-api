@@ -5,11 +5,13 @@ import {
   getVendorsContainer,
   getLineItemsContainer,
 } from '../../../infra/cosmos';
-import { Invoice, InvoiceStatus, File } from '../entities/invoice.entity';
+import { Invoice, InvoiceStatus, File, VehicleSnapshot, VendorSnapshot } from '../entities/invoice.entity';
 import { UpdateInvoiceDto } from '../dto/update-invoice.dto';
 import { QueryInvoiceDto } from '../dto/query-invoice.dto';
 import { fileUploadService } from '../../../shared/services/file-upload.service';
 import { generateInvoiceStoragePath, extractYear, extractMonth } from '../../../shared/helpers/document-validation.helper';
+import { Vehicle } from '../../vehicle/entities/vehicle.entity';
+import { Vendor } from '../../vendor/entities/vendor.entity';
 
 function nowIso() {
   return new Date().toISOString();
@@ -47,6 +49,30 @@ export class InvoiceService {
     return await getLineItemsContainer();
   }
 
+  // Helper to create vehicle snapshot from vehicle data
+  private createVehicleSnapshot(vehicle: Vehicle): VehicleSnapshot {
+    return {
+      id: vehicle.id,
+      truckExternalId: vehicle.truckExternalId,
+      vin: vehicle.vin,
+      tagNumber: vehicle.tagNumber,
+      make: vehicle.make,
+      color: vehicle.color,
+      year: vehicle.year,
+      status: vehicle.status,
+    };
+  }
+
+  // Helper to create vendor snapshot from vendor data
+  private createVendorSnapshot(vendor: Vendor): VendorSnapshot {
+    return {
+      id: vendor.id,
+      name: vendor.name,
+      status: vendor.status,
+      type: vendor.type,
+    };
+  }
+
   async create(payload: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Invoice> {
     // Validate required fields
     if (!payload.vehicleId?.trim()) throw new Error('vehicleId is required');
@@ -58,19 +84,21 @@ export class InvoiceService {
       throw new Error('invoiceAmount is required and must be >= 0');
     }
 
-    // Validate that vehicle exists
+    // Validate that vehicle exists and get vehicle data for snapshot
     const vehiclesContainer = await this.getVehiclesContainer();
-    const vehicle = await vehiclesContainer.item(payload.vehicleId, payload.vehicleId).read();
-    if (!vehicle.resource) {
+    const vehicleResponse = await vehiclesContainer.item(payload.vehicleId, payload.vehicleId).read<Vehicle>();
+    if (!vehicleResponse.resource) {
       throw new Error(`Vehicle with id '${payload.vehicleId}' not found`);
     }
+    const vehicleSnapshot = this.createVehicleSnapshot(vehicleResponse.resource);
 
-    // Validate that vendor exists
+    // Validate that vendor exists and get vendor data for snapshot
     const vendorsContainer = await this.getVendorsContainer();
-    const vendor = await vendorsContainer.item(payload.vendorId, payload.vendorId).read();
-    if (!vendor.resource) {
+    const vendorResponse = await vendorsContainer.item(payload.vendorId, payload.vendorId).read<Vendor>();
+    if (!vendorResponse.resource) {
       throw new Error(`Vendor with id '${payload.vendorId}' not found`);
     }
+    const vendorSnapshot = this.createVendorSnapshot(vendorResponse.resource);
 
     // Check for duplicate invoice number
     const container = await this.getContainer();
@@ -87,6 +115,8 @@ export class InvoiceService {
       id: this.generateId(),
       vehicleId: payload.vehicleId.trim(),
       vendorId: payload.vendorId.trim(),
+      vehicle: vehicleSnapshot,
+      vendor: vendorSnapshot,
       invoiceNumber: payload.invoiceNumber.trim(),
       orderStartDate: payload.orderStartDate,
       uploadDate: payload.uploadDate,
@@ -594,20 +624,23 @@ export class InvoiceService {
       metadata,
     } = params;
 
-    // Validate vendor exists
+    // Validate vendor exists and get vendor data for snapshot
     const vendorsContainer = await this.getVendorsContainer();
-    const vendor = await vendorsContainer.item(vendorId, vendorId).read();
-    if (!vendor.resource) {
+    const vendorResponse = await vendorsContainer.item(vendorId, vendorId).read<Vendor>();
+    if (!vendorResponse.resource) {
       throw new Error(`Vendor with ID ${vendorId} not found`);
     }
+    const vendorSnapshot = this.createVendorSnapshot(vendorResponse.resource);
 
-    // Validate vehicle exists if provided
+    // Validate vehicle exists if provided and get vehicle data for snapshot
+    let vehicleSnapshot: VehicleSnapshot | undefined;
     if (vehicleId) {
       const vehiclesContainer = await this.getVehiclesContainer();
-      const vehicle = await vehiclesContainer.item(vehicleId, vehicleId).read();
-      if (!vehicle.resource) {
+      const vehicleResponse = await vehiclesContainer.item(vehicleId, vehicleId).read<Vehicle>();
+      if (!vehicleResponse.resource) {
         throw new Error(`Vehicle with ID ${vehicleId} not found`);
       }
+      vehicleSnapshot = this.createVehicleSnapshot(vehicleResponse.resource);
     }
 
     // Check for duplicate invoice number
@@ -655,6 +688,8 @@ export class InvoiceService {
       id: this.generateId(),
       vehicleId: vehicleId,
       vendorId: vendorId,
+      vehicle: vehicleSnapshot,
+      vendor: vendorSnapshot,
       invoiceNumber: invoiceNumber,
       orderStartDate: orderStartDate,
       uploadDate: new Date().toISOString(),

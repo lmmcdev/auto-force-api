@@ -78,8 +78,9 @@ export class LineItemService {
 
     // Calculate total price
     const unitPrice = Number(payload.unitPrice.toFixed(2));
+    const unitLabor = Number((payload.unitLabor || 0).toFixed(2));
     const quantity = Number(payload.quantity.toFixed(2));
-    const totalPrice = Number((unitPrice * quantity).toFixed(2));
+    const totalPrice = Number(((unitPrice + unitLabor) * quantity).toFixed(2));
 
     const doc: LineItem = {
       id: this.generateId(),
@@ -88,6 +89,7 @@ export class LineItemService {
       vehicleId: invoiceData.vehicleId || '', // Auto-populate from invoice
       vendorId: invoiceData.vendorId || '', // Auto-populate from invoice
       unitPrice: unitPrice,
+      unitLabor: unitLabor,
       quantity: quantity,
       totalPrice: totalPrice,
       type: payload.type || 'Labor',
@@ -312,10 +314,11 @@ export class LineItemService {
       await this.validateInvoiceStatus(payload.invoiceId);
     }
 
-    // Calculate new total price if unit price or quantity changed
+    // Calculate new total price if unit price, unit labor, or quantity changed
     const unitPrice = payload.unitPrice !== undefined ? Number(payload.unitPrice.toFixed(2)) : current.unitPrice;
+    const unitLabor = payload.unitLabor !== undefined ? Number(payload.unitLabor.toFixed(2)) : current.unitLabor;
     const quantity = payload.quantity !== undefined ? Number(payload.quantity.toFixed(2)) : current.quantity;
-    const totalPrice = Number((unitPrice * quantity).toFixed(2));
+    const totalPrice = Number(((unitPrice + unitLabor) * quantity).toFixed(2));
 
     // Check if total price changed, invoice ID changed, or taxable status changed
     const totalPriceChanged = totalPrice !== current.totalPrice;
@@ -735,8 +738,9 @@ export class LineItemService {
 
         // Calculate total price
         const unitPrice = Number(item.unitPrice.toFixed(2));
+        const unitLabor = Number((item.unitLabor || 0).toFixed(2));
         const quantity = Number(item.quantity.toFixed(2));
-        const totalPrice = Number((unitPrice * quantity).toFixed(2));
+        const totalPrice = Number(((unitPrice + unitLabor) * quantity).toFixed(2));
 
         // Create the document with provided ID
         const doc: LineItem = {
@@ -749,6 +753,7 @@ export class LineItemService {
           vehicleId: item.vehicleId || invoiceData.vehicleId,
           vendorId: item.vendorId || invoiceData.vendorId,
           unitPrice: unitPrice,
+          unitLabor: unitLabor,
           quantity: quantity,
           totalPrice: totalPrice,
           mileage: Math.floor(item.mileage || 0),

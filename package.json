@@ -13,7 +13,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix"
+    "lint:fix": "eslint . --ext .ts --fix",
+    "migrate:snapshots": "npx ts-node scripts/migrate-invoice-snapshots.ts",
+    "migrate:snapshots:dry-run": "npx ts-node scripts/migrate-invoice-snapshots-dry-run.ts"
   },
   "dependencies": {
     "@azure/cosmos": "^4.5.1",
@@ -34,6 +36,7 @@
     "eslint-plugin-prettier": "^5.5.4",
     "prettier": "^3.6.2",
     "rimraf": "^5.0.0",
+    "ts-node": "^10.9.2",
     "typescript": "^4.0.0"
   }
 }

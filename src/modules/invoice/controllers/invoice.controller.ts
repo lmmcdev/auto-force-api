@@ -230,12 +230,8 @@ export class InvoiceController {
         return { status: 400, jsonBody: { message: 'orderStartDate is required' } };
       }
 
-      if (!formData.fields.invoiceAmount) {
-        return { status: 400, jsonBody: { message: 'invoiceAmount is required' } };
-      }
-
       // Parse numeric fields
-      const invoiceAmount = parseFloat(formData.fields.invoiceAmount);
+      const invoiceAmount = formData.fields.invoiceAmount ? parseFloat(formData.fields.invoiceAmount) : 0;
       const subTotal = formData.fields.subTotal ? parseFloat(formData.fields.subTotal) : invoiceAmount;
       const tax = formData.fields.tax ? parseFloat(formData.fields.tax) : 0;
 

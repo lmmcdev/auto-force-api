@@ -6,6 +6,7 @@ export interface UpdateLineItemDto {
   vehicleId?: string;
   vendorId?: string;
   unitPrice?: number;
+  unitLabor?: number;
   quantity?: number;
   type?: LineItemType;
   mileage?: number;
