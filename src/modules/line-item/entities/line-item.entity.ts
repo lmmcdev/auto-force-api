@@ -7,8 +7,9 @@ export interface LineItem {
   vehicleId: string; // Associated with a vehicle (inherited from invoice)
   vendorId: string; // Associated with a vendor (inherited from invoice)
   unitPrice: number; // Number with two decimal places
+  unitLabor: number; // Number with two decimal places
   quantity: number; // Number with two decimal places
-  totalPrice: number; // Calculated: quantity * unitPrice
+  totalPrice: number; // Calculated: quantity * (unitPrice + unitLabor)
   type: LineItemType; // Parts or Labor
   mileage: number; // Integer number
   taxable: boolean; // true or false
@@ -27,6 +28,7 @@ export class LineItemEntity implements LineItem {
   vehicleId: string;
   vendorId: string;
   unitPrice: number;
+  unitLabor: number;
   quantity: number;
   totalPrice: number;
   type: LineItemType;
@@ -46,8 +48,9 @@ export class LineItemEntity implements LineItem {
     this.vehicleId = lineItem.vehicleId || '';
     this.vendorId = lineItem.vendorId || '';
     this.unitPrice = lineItem.unitPrice || 0;
+    this.unitLabor = lineItem.unitLabor || 0;
     this.quantity = lineItem.quantity || 0;
-    this.totalPrice = lineItem.totalPrice || this.calculateTotalPrice(this.unitPrice, this.quantity);
+    this.totalPrice = lineItem.totalPrice || this.calculateTotalPrice(this.unitPrice, this.unitLabor, this.quantity);
     this.type = lineItem.type || 'Parts';
     this.mileage = Math.floor(lineItem.mileage || 0); // Ensure integer
     this.taxable = lineItem.taxable ?? false;
@@ -60,13 +63,13 @@ export class LineItemEntity implements LineItem {
   }
 
   // Helper method to calculate total price
-  private calculateTotalPrice(unitPrice: number, quantity: number): number {
-    return Number((unitPrice * quantity).toFixed(2));
+  private calculateTotalPrice(unitPrice: number, unitLabor: number, quantity: number): number {
+    return Number(((unitPrice + unitLabor) * quantity).toFixed(2));
   }
 
-  // Helper method to recalculate total price when unit price or quantity changes
+  // Helper method to recalculate total price when unit price, unit labor, or quantity changes
   recalculateTotalPrice(): void {
-    this.totalPrice = this.calculateTotalPrice(this.unitPrice, this.quantity);
+    this.totalPrice = this.calculateTotalPrice(this.unitPrice, this.unitLabor, this.quantity);
   }
 
   // Static helper to format numbers to 2 decimal places

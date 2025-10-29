@@ -207,6 +207,42 @@ export class VehicleController {
     }
   }
 
+  // GET /vehicles/decode-vin/{vin}
+  async decodeVin(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    try {
+      const vin = request.params.vin;
+
+      if (!vin) {
+        return { status: 400, jsonBody: { message: 'VIN parameter is required' } };
+      }
+
+      // Validate VIN format (17 characters, alphanumeric, no I, O, Q)
+      const vinRegex = /^[A-HJ-NPR-Z0-9]{17}$/;
+      if (!vinRegex.test(vin.toUpperCase())) {
+        return {
+          status: 400,
+          jsonBody: {
+            message: 'Invalid VIN format. VIN must be 17 alphanumeric characters (excluding I, O, Q)',
+          },
+        };
+      }
+
+      // Decode VIN using NHTSA API
+      const decodedData = await vehicleService.decodeVin(vin);
+
+      return {
+        status: 200,
+        jsonBody: {
+          message: 'VIN decoded successfully',
+          data: decodedData,
+        },
+      };
+    } catch (err: unknown) {
+      context.error('vehicle.decodeVin error', err);
+      return this.toError(err);
+    }
+  }
+
   private toError(err: unknown): HttpResponseInit {
     const msg = err instanceof Error ? err.message : String(err ?? 'Internal error');
     const status = /not found/i.test(msg)
@@ -292,4 +328,11 @@ app.http('GetVehiclesByMakeAndYear', {
   route: `${vehiclesRoute}/by-make-year/{make}/{year}`,
   authLevel: 'function',
   handler: (req, ctx) => vehicleController.getByMakeAndYear(req, ctx),
+});
+
+app.http('DecodeVin', {
+  methods: ['GET'],
+  route: `${vehiclesRoute}/decode-vin/{vin}`,
+  authLevel: 'function',
+  handler: (req, ctx) => vehicleController.decodeVin(req, ctx),
 });
