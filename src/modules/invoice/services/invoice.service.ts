@@ -9,7 +9,11 @@ import { Invoice, InvoiceStatus, File, VehicleSnapshot, VendorSnapshot } from '.
 import { UpdateInvoiceDto } from '../dto/update-invoice.dto';
 import { QueryInvoiceDto } from '../dto/query-invoice.dto';
 import { fileUploadService } from '../../../shared/services/file-upload.service';
-import { generateInvoiceStoragePath, extractYear, extractMonth } from '../../../shared/helpers/document-validation.helper';
+import {
+  generateInvoiceStoragePath,
+  extractYear,
+  extractMonth,
+} from '../../../shared/helpers/document-validation.helper';
 import { Vehicle } from '../../vehicle/entities/vehicle.entity';
 import { Vendor } from '../../vendor/entities/vendor.entity';
 
@@ -225,7 +229,8 @@ export class InvoiceService {
     try {
       const { resources } = await container.items.query<Invoice>(q).fetchAll();
       const total = resources.length;
-      const data = resources.slice(skip, skip + take);
+      //const data = resources.slice(skip, skip + take);
+      const data = resources;
 
       return { data, total };
     } catch (error) {

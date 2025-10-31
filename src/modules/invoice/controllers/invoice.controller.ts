@@ -94,6 +94,8 @@ export class InvoiceController {
         take: url.searchParams.get('take') ? Number(url.searchParams.get('take')) : undefined,
       };
 
+      //context.log('InvoiceController.getMany query:', query);
+
       const { data, total } = await invoiceService.find(query);
       return { status: 200, jsonBody: { data, total } };
     } catch (err: unknown) {
